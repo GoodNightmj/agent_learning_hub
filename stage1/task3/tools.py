@@ -3,6 +3,8 @@ import operator
 from pathlib import Path
 from typing import Any
 
+from pydantic import Field
+
 
 BINARY_OPERATORS = {
     ast.Add: operator.add,
@@ -250,4 +252,25 @@ def get_text_length(text: str) -> dict[str, Any]:
     return {
         "success": True,
         "result": len(text)
+    }
+
+def repeat_text(text: str, times: int) -> dict[str, Any]:
+    if not isinstance(text, str):
+        return {
+            "success": False,
+            "error": "text 必须是字符串"
+        }
+    if len(text) == 0:
+        return {
+            "success": False,
+            "error": "文本不能为空"
+        }
+    if not isinstance(times, int) or times < 1 or times > 10:
+        return {
+            "success": False,
+            "error": "times 必须是大于等于 1 且小于等于 10 的整数"
+        }
+    return{
+        "success": True,
+        "result": text * times
     }

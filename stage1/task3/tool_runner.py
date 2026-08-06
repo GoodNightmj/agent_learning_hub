@@ -1,101 +1,98 @@
-from typing import Any
-from tools import calculator, search,read_file,get_text_length
+from typing import Any, Callable, Literal
+from pydantic import BaseModel, ConfigDict
 
 
-TOOLS={
+class ToolCall(BaseModel):
+    model_config = ConfigDict(
+        strict=True,
+        extra="forbid",
+    )
+
+    action: Literal[
+        "calculator",
+        "search",
+        "read_file",
+        "get_text_length",
+        "repeat_text",
+    ]
+
+    arguments: dict[str, Any]
+from tools import (
+    calculator,
+    get_text_length,
+    read_file,
+    search,
+    repeat_text,
+)
+
+
+ToolFunction = Callable[..., dict[str, Any]]
+
+
+TOOLS: dict[str, ToolFunction] = {
     "calculator": calculator,
     "search": search,
     "read_file": read_file,
     "get_text_length": get_text_length,
+    "repeat_text": repeat_text,
 }
 
-def run_tool(action: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(action, str):
+def run_tool(
+        tool_name: str,
+        tool_arguments: dict[str, Any],
+) -> dict[str, Any]:
+    tool_function = TOOLS.get(tool_name)
+    if tool_function is None:
         return{
             "success": False,
-            "error": "action 必须是字符串",
+            "error": f"未知的工具：{tool_name}",
         }
-    if not isinstance(arguments, dict):
-        return{
-            "success": False,
-            "error": "arguments 必须是字典",
-        }
-    tool_func = TOOLS.get(action)
-    if tool_func is None:
-        return{
-            "success": False,
-            "error": f"未知的 action: {action}",
-        }
+
     try:
-        result = tool_func(**arguments)
-        return result
-    except TypeError as e:
-        return{
+        result = tool_function(**tool_arguments)
+    except TypeError as exc:
+        return {
             "success": False,
-            "error": f"参数错误: {str(e)}",
+            "error": f"工具调用参数错误：{exc}",
         }
-    except Exception as e:
-        return{
+    except Exception as exc:
+        return {
             "success": False,
-            "error": f"执行工具时发生错误: {str(e)}",
+            "error": f"工具执行失败：{exc}",
         }
+    if not isinstance(result, dict):
+        return {
+            "success": False,
+            "error": "工具返回值必须是字典",
+        }
+    if "success" not in result:
+        return {
+            "success": False,
+            "error": "工具返回值必须包含 'success' 字段",
+        }
+    if not isinstance(result["success"], bool):
+        return {
+            "success": False,
+            "error": "'success' 字段必须是布尔值",
+        }
+    return result
 
-if __name__ == "__main__":
-    test_cases = [
-        {
-            "action": "calculator",
-            "arguments": {
-                "expression": "23 * 17",
-            },
-        },
-        {
-            "action": "search",
-            "arguments": {
-                "query": "什么是 Agent",
-            },
-        },
-        {
-            "action": "read_file",
-            "arguments": {
-                "path": "agent.txt",
-            },
-        },
-        {
-            "action": "get_text_length",
-            "arguments": {
-                "text": "Agent",
-            },
-        },
-        {
-            "action": "unknown_tool",
-            "arguments": {},
-        },
-        {
-            "action": "calculator",
-            "arguments": {
-                "formula": "1 + 2",
-            },
-        },
-        {
-            "action": "calculator",
-            "arguments": {},
-        },
-        {
-            "action": "calculator",
-            "arguments": "1 + 2",
-        },
-    ]
+def run_tool_call(
+    tool_call: ToolCall,
+) -> dict[str, Any]:
+    """
+    根据工具调用对象查找并执行工具。
 
-    for index, test_case in enumerate(
-        test_cases,
-        start=1,
-    ):
-        print(f"\n测试 {index}")
-        print("调用请求：", test_case)
+    参数：
+        tool_call：工具调用对象。
 
-        result = run_tool(
-            action=test_case["action"],
-            arguments=test_case["arguments"],
-        )
+    返回：
+        统一格式的执行结果。
+    """
+    return run_tool(
+        tool_name=tool_call.action,
+        tool_arguments=tool_call.arguments,
+    )
 
-        print("执行结果：", result)
+
+

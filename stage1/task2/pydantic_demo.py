@@ -76,7 +76,7 @@ response = client.chat.completions.create(
 )
 
 if not response.choices:
-    print(response.model_dump_json(indent=2))
+    print(response.model_dump_json(indent=2))#model_dump_json() 方法将模型对象转换为 JSON 字符串，并使用缩进进行格式化输出。model_dump()是将模型对象转换为字典的形式。
     raise ValueError("API 返回的 choices 为空，请检查模型配置和请求参数。")
 json_text = response.choices[0].message.content
 if not json_text:
@@ -84,7 +84,7 @@ if not json_text:
 print("\n模型原始输出：")
 print(json_text)
 try:
-    result = TaskAnalysis.model_validate_json(json_text)
+    result = TaskAnalysis.model_validate_json(json_text)#model_validate_json() 方法用于验证和解析 JSON 字符串，并将其转换为 Pydantic 模型对象。model_validate() 方法用于验证和解析字典数据，并将其转换为 Pydantic 模型对象。
 except ValidationError as exc:
     print(exc)
     raise ValueError("模型返回的 JSON 不符合预期格式，请检查模型输出。")
