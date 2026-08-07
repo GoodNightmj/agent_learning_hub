@@ -17,7 +17,7 @@ class ToolCall(BaseModel):
     ]
 
     arguments: dict[str, Any]
-from tools import (
+from stage1.task3.tools import (
     calculator,
     get_text_length,
     read_file,
