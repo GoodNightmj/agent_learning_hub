@@ -33,7 +33,7 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "function": {
             "name": "search",
             "description": (
-                "从本地模拟知识库中搜索 Python、Agent、RAG 等相关资料。"
+                "从本地模拟知识库中搜索 Python、Agent、RAG 等相关资料。没有其他资料。查询其他知识不要使用该工具。"
                 "该工具不访问互联网。"
             ),
             "parameters": {
