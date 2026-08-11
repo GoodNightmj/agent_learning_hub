@@ -75,4 +75,22 @@ TOOL_SCHEMA=[
             }
         }
     },
+    {
+        "type":"function",
+        "function":{
+            "name":"execute_python",
+            "description":"当问题需要执行 Python 代码时使用",
+            "parameters":{
+                "type":"object",
+                "properties":{
+                    "code":{
+                        "type":"string",
+                        "description":"要执行的 Python 代码"
+                    },
+                },
+                "required":["code"],
+                "additionalProperties":False
+            }
+        }
+    },
 ]

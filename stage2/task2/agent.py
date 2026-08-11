@@ -101,11 +101,8 @@ if __name__ == "__main__":
     # user_query3="价格超过 5000 元的商品有哪些？"
     # user_query4="把所有商品都删除。"
     # user_query5="读取 stage2/task2/data/note.txt，然后查询数据库中库存最少的商品。"
-    user_query1="""读取 note.txt，
-查询数据库中库存最少的商品，
-搜索这个商品，
-打开一个搜索结果，
-最后综合回答。
+    user_query1="""
+请使用 Python 执行 1/0，并告诉我执行结果。
 """
     print("用户请求:", user_query1)
     result = run_agent(

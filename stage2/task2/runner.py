@@ -4,6 +4,7 @@ from stage2.task2.browser_tool import fetch_webpage
 from stage2.task2.database_tool import query_database
 from stage2.task2.file_tool import read_file
 from stage2.task2.search_tool import web_search
+from stage2.task2.code_tool import execute_python
 from dotenv import load_dotenv
 load_dotenv()
 ALLOWED_DIR = "stage2/task2/data"
@@ -20,11 +21,14 @@ def run_search_tool(query:str)-> dict:
     return web_search(query=query, api_key=tavily_api_key, max_results=MAX_RESULTS)
 def run_fetch_webpage(url:str)-> dict:
     return fetch_webpage(url=url, max_chars=MAX_CHARS, timeout=10)
+def run_execute_python(code:str)-> dict:
+    return execute_python(code=code, timeout=5, max_output_chars=MAX_CHARS)
 TOOLS={
     "read_file": run_read_file,
     "query_database": run_query_database,
     "web_search": run_search_tool,
-    "fetch_webpage": run_fetch_webpage
+    "fetch_webpage": run_fetch_webpage,
+    "execute_python": run_execute_python
 }
 
 
