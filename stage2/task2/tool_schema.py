@@ -38,5 +38,23 @@ TOOL_SCHEMA=[
                 "additionalProperties":False,
             }
         }
-    }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"web_search",
+            "description":"当问题需要互联网中的外部信息、最新信息或本地工具中没有的信息搜索工具",
+            "parameters":{
+                "type":"object",
+                "properties":{
+                    "query":{
+                        "type":"string",
+                        "description":"用于搜索的关键词，你需要得到的知识"
+                    }
+                },
+                "required":["query"],
+                "additionalProperties":False
+            }
+        }
+    },
 ]

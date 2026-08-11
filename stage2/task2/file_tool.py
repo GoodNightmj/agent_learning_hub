@@ -9,7 +9,7 @@ def read_file(
 
     # TODO 1
     # 检查 max_chars > 0
-    if max_chars <= 0 or not isinstance(max_chars, int):
+    if not isinstance(max_chars, int) or max_chars <= 0:
         return {"success": False, "error": "max_chars 必须是大于 0 的整数"}
     try:
         file_path = Path(path).resolve()
