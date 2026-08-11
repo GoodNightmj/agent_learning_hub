@@ -1,0 +1,2 @@
+这是 Agent Stage 2 的测试文件。
+File Tool 应该只允许访问指定目录中的文件。
