@@ -49,13 +49,15 @@ def chunk_text(
 
     return chunks
 
-text = "abcdefghijklmno"
 
-result = chunk_text(
-    text=text,
-    chunk_size=10,
-    overlap=3
-)
+if __name__ == "__main__":
+    text = "abcdefghijklmno"
 
-for chunk in result:
-    print(chunk)
+    result = chunk_text(
+        text=text,
+        chunk_size=10,
+        overlap=3
+    )
+
+    for chunk in result:
+        print(chunk)
