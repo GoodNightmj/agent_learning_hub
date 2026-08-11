@@ -3,13 +3,13 @@ TOOL_SCHEMA=[
         "type":"function",
         "function":{
             "name":"read_file",
-            "description":"要读取的文件路径，只能读取允许目录中的文件",
+            "description":"要读取的文件路径，只能读取允许目录中的文件,如果只有文件名，默认在 allowed_dir 中查找",
             "parameters":{
                 "type":"object",
                 "properties":{
                     "path":{
                         "type":"string",
-                        "description":"文件路径"
+                        "description":"文件相对于 allowed_dir 的路径，或者 allowed_dir 下的文件名"
                     },
                 },
                 "required":["path"],
@@ -53,6 +53,24 @@ TOOL_SCHEMA=[
                     }
                 },
                 "required":["query"],
+                "additionalProperties":False
+            }
+        }
+    },
+    {
+        "type":"function",
+        "function":{
+            "name":"fetch_webpage",
+            "description":"当问题需要获取网页内容时使用",
+            "parameters":{
+                "type":"object",
+                "properties":{
+                    "url":{
+                        "type":"string",
+                        "description":"要获取的网页 URL"
+                    },
+                },
+                "required":["url"],
                 "additionalProperties":False
             }
         }

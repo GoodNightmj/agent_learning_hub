@@ -1,8 +1,11 @@
 import os
 
+from stage2.task2.browser_tool import fetch_webpage
 from stage2.task2.database_tool import query_database
 from stage2.task2.file_tool import read_file
 from stage2.task2.search_tool import web_search
+from dotenv import load_dotenv
+load_dotenv()
 ALLOWED_DIR = "stage2/task2/data"
 MAX_CHARS = 5000
 DB_PATH="stage2/task2/data/shop.db"
@@ -15,10 +18,13 @@ def run_query_database(sql:str) -> dict:
     return query_database(sql=sql, db_path=DB_PATH, max_rows=MAX_ROWS)
 def run_search_tool(query:str)-> dict:
     return web_search(query=query, api_key=tavily_api_key, max_results=MAX_RESULTS)
+def run_fetch_webpage(url:str)-> dict:
+    return fetch_webpage(url=url, max_chars=MAX_CHARS, timeout=10)
 TOOLS={
     "read_file": run_read_file,
     "query_database": run_query_database,
-    "web_search": run_search_tool
+    "web_search": run_search_tool,
+    "fetch_webpage": run_fetch_webpage
 }
 
 

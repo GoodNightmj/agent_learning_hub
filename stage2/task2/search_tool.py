@@ -1,6 +1,3 @@
-import os
-from dotenv import load_dotenv  
-load_dotenv()
 from tavily import TavilyClient
 from tavily import InvalidAPIKeyError, UsageLimitExceededError
 def web_search(

@@ -12,8 +12,9 @@ def read_file(
     if not isinstance(max_chars, int) or max_chars <= 0:
         return {"success": False, "error": "max_chars 必须是大于 0 的整数"}
     try:
-        file_path = Path(path).resolve()
         base_dir = Path(allowed_dir).resolve()
+        file_path = Path(base_dir / path).resolve()
+        
 
         # TODO 2
         # 判断 file_path 是否位于 base_dir 内

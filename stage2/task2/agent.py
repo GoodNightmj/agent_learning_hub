@@ -1,6 +1,3 @@
-
-import re
-
 from openai import OpenAI
 import os
 import json
@@ -104,26 +101,31 @@ if __name__ == "__main__":
     # user_query3="价格超过 5000 元的商品有哪些？"
     # user_query4="把所有商品都删除。"
     # user_query5="读取 stage2/task2/data/note.txt，然后查询数据库中库存最少的商品。"
-    user_query1="搜索一下什么是 Model Context Protocol，并简单介绍。"
-    user_query2="""搜索 Python pathlib 的相关资料，
-告诉我 Path.resolve 是做什么的，
-并给出你参考的网页地址。"""
-    user_query3="你好，你是谁？"
-    user_query4="先查询数据库中最贵的商品，再搜索一下这个商品是什么。"
-    user_query5="""读取 stage2/task2/data/note.txt，
+    user_query1="""读取 note.txt，
 查询数据库中库存最少的商品，
-再在网上搜索这个商品，
-最后综合告诉我三部分结果。"""
-    for user_query in [user_query1, user_query2, user_query3,user_query4,user_query5]:
-        print("用户请求:", user_query)
-        result = run_agent(
-            client,
-            user_query=user_query,
-            tools=TOOL_SCHEMA,
-            model=model
-        )
-        print("最终结果:", result)
-        print("\n\n====================\n\n")
+搜索这个商品，
+打开一个搜索结果，
+最后综合回答。
+"""
+    print("用户请求:", user_query1)
+    result = run_agent(
+        client,
+        user_query=user_query1,
+        tools=TOOL_SCHEMA,
+        model=model
+    )
+    print("最终结果:", result)
+    print("\n\n====================\n\n")
+    # for user_query in [user_query1, user_query2, user_query3,user_query4,user_query5]:
+    #     print("用户请求:", user_query)
+    #     result = run_agent(
+    #         client,
+    #         user_query=user_query,
+    #         tools=TOOL_SCHEMA,
+    #         model=model
+    #     )
+    #     print("最终结果:", result)
+    #     print("\n\n====================\n\n")
     
 
 
