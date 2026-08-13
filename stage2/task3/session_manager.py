@@ -16,6 +16,7 @@ class SessionManager:
                         "content": "你是一个可以使用工具的智能助手。"
                 }],
                 "created_at": time.time(),
+                "summary": "",
             }
             self.sessions[session_id] = new_session
             return new_session
