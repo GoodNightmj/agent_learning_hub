@@ -2,7 +2,8 @@ def plan_compression(
     messages: list,
     keep_recent_turns: int
 ) -> dict:
-    compressed_messages = []
+    if not isinstance(keep_recent_turns, int) or keep_recent_turns <= 0:
+        raise ValueError("keep_recent_turns 必须是大于 0 的整数")
     turns=[]
     current_turn = []
     for message in messages:
@@ -14,7 +15,7 @@ def plan_compression(
             current_turn = [message]
         else:
             current_turn.append(message)
-        if current_turn:
+    if current_turn:
             turns.append(current_turn)
     system_message = messages[0]
     if len(turns) <= keep_recent_turns:
@@ -23,7 +24,7 @@ def plan_compression(
             "old_turns": "",
             "recent_turns": turns,
             "messages_to_summarize": [],
-            "recent_messages": [].extend([msg for turn in turns for msg in turn])
+            "recent_messages": [msg for turn in turns for msg in turn]
         }
     else:
         old_turns = turns[:-keep_recent_turns]
