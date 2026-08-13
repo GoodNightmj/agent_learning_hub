@@ -18,9 +18,9 @@ def chat(
         messages,
         user_query,
         TOOL_SCHEMA,
-        model
+        model # type: ignore
     )
-    compress_context(session, client, model)
+    compress_context(session, client, model)# type: ignore
     return result
 
 if __name__ == "__main__":
