@@ -19,8 +19,6 @@ def summarize_messages(
 7. 删除寒暄、重复表达和无关细节。
 8. 不得创造、推断或补充原内容中不存在的信息。
 9. 如果新信息与旧摘要冲突，以更新、更明确的信息为准。"""
-    turns= split_into_turns(messages_to_summarize)
-
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -41,7 +39,7 @@ def split_into_turns(messages: list) -> list[list]:
         elif message["role"] == "user":
             if current_turn :#不空说明上一个 turn 结束了
                 turns.append(current_turn)
-            current_turn = [message]
+            current_turn = [message]# 整个turns第一条消息是 user 消息
         else:
             current_turn.append(message)
     if current_turn:
@@ -54,6 +52,8 @@ def compress_context(
     model: str,
     keep_recent_turns: int = 3
 ):
+    if not isinstance(keep_recent_turns, int) or keep_recent_turns <= 0:
+        raise ValueError("keep_recent_turns 必须是大于 0 的整数")
     messages = session["messages"]
 
     # 1. 找到最初的 system message
