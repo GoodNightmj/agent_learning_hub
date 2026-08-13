@@ -2,6 +2,7 @@ from calendar import c
 from  stage2.task2.tool_schema import TOOL_SCHEMA
 from stage2.task2.agent import call_model_message,execute_tool_calls
 import json
+from stage2.task3.load import load
 def run_agent_turn(
     client,
     messages: list,
@@ -15,7 +16,6 @@ def run_agent_turn(
         response_message = call_model_message(client, messages, tools, model)
         if response_message.tool_calls is None or len(response_message.tool_calls) == 0:
             # 如果模型返回的是 assistant 消息，说明模型没有调用工具，而是直接给出了回答
-            print("模型回答:", response_message.content)
             messages.append(response_message)
             return response_message.content
         else:
@@ -35,19 +35,26 @@ def run_agent_turn(
 
 if __name__ == "__main__":
     # 测试 run_agent_turn 函数
-    import os
-    from dotenv import load_dotenv
-    from openai import OpenAI
-    load_dotenv()
-    api_key = os.getenv("LLM_API_KEY")
-    base_url = os.getenv("LLM_BASE_URL")
-    model = os.getenv("LLM_MODEL")
-    client = OpenAI(api_key=api_key, base_url=base_url)
+    client, model = load()
     messages = [{"role": "system", "content": "你是一个智能助手，能够调用工具来帮助用户解决问题。请根据用户的请求，决定是否需要调用工具，并给出最终回答。"}]
-    result = run_agent_turn(client,messages, "我叫小明", TOOL_SCHEMA, model)
-    print("最终结果:", result)
+    result1 = run_agent_turn(
+    client,
+    messages,
+    "数据库中库存最少的商品是什么？",
+    TOOL_SCHEMA,
+    model
+)
+    print("result1:\n", result1)
     print("------------------------")
-    result2=run_agent_turn(client,messages, "我叫什么", TOOL_SCHEMA, model)
+    result2 = run_agent_turn(
+    client,
+    messages,
+    "它多少钱？",
+    TOOL_SCHEMA,
+    model
+)
+    print("result2:\n", result2)
+    print("------------------------")
     for message in messages:
         print(message)
         print("------------------------")
