@@ -1,6 +1,5 @@
 from sentence_transformers import SentenceTransformer
 from stage2.task1.embedder import cosine_similarity
-import numpy as np
 def memory_dict_to_records(memories: dict) -> list[dict]:
     list_of_records = []
     for key, value in memories.items():
@@ -19,12 +18,12 @@ def retrieve_memories(
     query: str,
     records: list[dict],
     top_k: int = 3
-) -> list[dict]| None:
+) -> list[dict]:
     if not query or not query.strip():
         raise ValueError("用户查询为空，请提供有效的查询。")
     if not records or len(records) == 0:
         return []
-    if not top_k or top_k <= 0:
+    if not isinstance(top_k, int) or top_k <= 0:
         raise ValueError("top_k 必须是大于 0 的整数。")
     query_embedding = model.encode(query)
     similarities = []
