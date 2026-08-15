@@ -26,6 +26,7 @@ def memory_chat(
     user_query:str
 ):
     user_memory_message = get_user_memory_message(memory_store, user_id)
+    session = session_manager.get_or_create_session(session_id)
     session_messages = get_session_messages(session_manager, session_id)
     request_messages =build_request_messages(session_messages, user_memory_message)
     client, model = load()
@@ -39,7 +40,7 @@ def memory_chat(
     )
     new_messages = request_messages[start_index:]
     session_messages.extend(new_messages)
-    session = session_manager.get_or_create_session(session_id)
+    
     compress_context(session, client, model)# type: ignore
     return result
         
