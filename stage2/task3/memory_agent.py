@@ -8,29 +8,26 @@ from stage2.task3.memory_store import MemoryStore
 from stage2.task3.conversation_agent import run_agent_turn
 from stage2.task3.context_manager import compress_context
 from pathlib import Path
-from stage2.task3.memory_retriever import memory_dict_to_records, records_to_memory_dict, retrieve_memories
-def get_user_memory_message(
-    memory_store:MemoryStore,
-    user_id:str
-)-> dict | None:
-    return build_memory_message(memory_store.get_memories(user_id))
-def get_relevant_memory_messages(
+from stage2.task3.memory_retriever import memory_dict_to_records, records_to_memory_dict, retrieve_memory_records
+
+def get_relevant_memory_message(
         memory_store:MemoryStore,
         user_id:str,
         embedding_model:SentenceTransformer,
         user_query:str,
         top_k:int = 3
-)-> dict :
+)-> dict | None:
     user_memories = memory_store.get_memories(user_id)
     if not user_memories:
         return {}
-    retrieved_records = retrieve_memories(
+    retrieved_records = retrieve_memory_records(
         embedding_model,
         user_query,
         memory_dict_to_records(user_memories),
         top_k
     )
-    return records_to_memory_dict(retrieved_records)
+    relevant_memories = records_to_memory_dict([record["record"] for record in retrieved_records])
+    return build_memory_message(relevant_memories)
 
 def get_session_messages(
     session_manager:SessionManager,
@@ -47,7 +44,7 @@ def memory_chat(
     user_query:str,
     embedding_model:SentenceTransformer 
 ):
-    user_memory_message = get_relevant_memory_messages(
+    user_memory_messages = get_relevant_memory_message(
         memory_store,
         user_id,
         embedding_model,
@@ -55,7 +52,7 @@ def memory_chat(
     )
     session = session_manager.get_or_create_session(session_id)
     session_messages = get_session_messages(session_manager, session_id)
-    request_messages =build_request_messages(session_messages, user_memory_message)
+    request_messages =build_request_messages(session_messages, user_memory_messages)
     client, model = load()
     start_index=len(request_messages)
     result=run_agent_turn(

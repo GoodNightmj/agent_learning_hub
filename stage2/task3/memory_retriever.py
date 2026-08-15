@@ -13,7 +13,7 @@ def records_to_memory_dict(records: list[dict]) -> dict:
         if key is not None and value is not None:
             memories[key] = value
     return memories
-def retrieve_memories(
+def retrieve_memory_records(
     model:SentenceTransformer,
     query: str,
     records: list[dict],
