@@ -1,4 +1,5 @@
-def load():
+from openai import OpenAI
+def load()->tuple[OpenAI, str]:
     import os
     from dotenv import load_dotenv
     from openai import OpenAI
