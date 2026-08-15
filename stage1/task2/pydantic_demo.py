@@ -71,8 +71,10 @@ response = client.chat.completions.create(
             "role": "user",
             "content": user_prompt,
         },
-    ]
-
+    ],
+    response_format={
+            "type": "json_object",
+        },
 )
 
 if not response.choices:
