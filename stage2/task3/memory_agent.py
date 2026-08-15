@@ -19,7 +19,7 @@ def get_relevant_memory_message(
 )-> dict | None:
     user_memories = memory_store.get_memories(user_id)
     if not user_memories:
-        return {}
+        return None
     retrieved_records = retrieve_memory_records(
         embedding_model,
         user_query,
@@ -44,7 +44,7 @@ def memory_chat(
     user_query:str,
     embedding_model:SentenceTransformer 
 ):
-    user_memory_messages = get_relevant_memory_message(
+    user_memory_message = get_relevant_memory_message(
         memory_store,
         user_id,
         embedding_model,
@@ -52,7 +52,7 @@ def memory_chat(
     )
     session = session_manager.get_or_create_session(session_id)
     session_messages = get_session_messages(session_manager, session_id)
-    request_messages =build_request_messages(session_messages, user_memory_messages)
+    request_messages =build_request_messages(session_messages, user_memory_message)
     client, model = load()
     start_index=len(request_messages)
     result=run_agent_turn(
