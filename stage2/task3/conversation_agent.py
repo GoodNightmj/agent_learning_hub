@@ -17,7 +17,7 @@ def run_agent_turn(
         if response_message.tool_calls is None or len(response_message.tool_calls) == 0:
             # 如果模型返回的是 assistant 消息，说明模型没有调用工具，而是直接给出了回答
             messages.append(response_message.model_dump(exclude_none=True))
-            return response_message.content
+            return {"success": True, "content": response_message.content}
         else:
             # 如果模型返回的是 tool 消息，说明模型调用了工具
             tool_calls = response_message.tool_calls
