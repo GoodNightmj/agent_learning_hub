@@ -1,5 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel,ValidationError
+from s
 import json
+
+from stage2.task3.memory_store import MemoryStore
 class MemoryCandidate(BaseModel):
     key: str
     value: str
@@ -41,7 +44,8 @@ def extract_memory_candidates(
     key 是信息的名称，value 是信息的内容。
 
     请注意：
-    - 只提取用户明确表达的信息。
+    - 只提取用户明确表达的信息。不要根据用户的问题、地点提及或上下文推断用户个人事实；
+    - 当前的一次性请求不属于长期记忆。
     - 只保存长期有价值的信息。
     - 如果用户输入中没有明显的记忆信息，你仍然需要返回一个空的 memory_candidates 数组。
     - 尽量复用已有 key
@@ -71,5 +75,27 @@ def extract_memory_candidates(
     try:
         memory_extraction = MemoryExtraction.model_validate_json(content)
         return memory_extraction
-    except Exception as e:
+    except ValidationError as e:
         raise ValueError(f"无法解析模型输出为 MemoryExtraction: {e}")
+
+
+def apply_memory_extraction(
+    memory_store:MemoryStore,
+    user_id: str,
+    extraction: MemoryExtraction
+) -> list[dict]:
+    current_memories = memory_store.get_memories(user_id)
+    results = []
+    for candidate in extraction.memory_candidates:
+        action=decide_memory_action(current_memories, candidate)
+        if action == "add":
+            memory_store.set_memory(user_id, candidate.key, candidate.value)
+            current_memories[candidate.key] = candidate.value
+            results.append({"action": "add", "key": candidate.key, "value": candidate.value})
+        elif action == "update":
+            memory_store.set_memory(user_id, candidate.key, candidate.value)
+            current_memories[candidate.key] = candidate.value
+            results.append({"action": "update", "key": candidate.key, "value": candidate.value})
+        else:
+            results.append({"action": "ignore", "key": candidate.key, "value": candidate.value})
+    return results
