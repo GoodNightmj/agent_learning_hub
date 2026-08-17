@@ -1,10 +1,10 @@
 from typing import Any
 
 from pydantic import BaseModel, Field
-
+import json 
 
 class Evidence(BaseModel):
-
+    locator: str | None = None
     evidence_id: str
     source_type: str
     content: str
@@ -16,6 +16,7 @@ class EvidenceStore:
     def __init__(self) -> None:
         self._evidences={}
         self._next_id=1
+        self._fingerprint_to_id: dict[str, str] = {}
     def add(
         self,
         *,
@@ -24,18 +25,33 @@ class EvidenceStore:
         title: str | None = None,
         uri: str | None = None,
         metadata: dict[str, Any] | None = None,
+        locator: str | None = None
     ) -> Evidence:
+        cleaned_content = content.strip()
+        if not cleaned_content:
+            raise ValueError("content 不能为 None 或空字符串")
         evidence = Evidence(
             evidence_id=f"E{self._next_id}",
             source_type=source_type,
-            content=content,
+            content=cleaned_content,
             title=title,
             uri=uri,
-            metadata=metadata if metadata is not None else {}
+            metadata=metadata if metadata is not None else {},
+            locator=locator
         )
-        self._evidences[evidence.evidence_id] = evidence
-        self._next_id += 1
-        return evidence
+        fingerprint = build_evidence_fingerprint(
+            source_type=source_type,
+            uri=uri,
+            locator=locator,
+            content=cleaned_content
+        )
+        if fingerprint in self._fingerprint_to_id:
+            return self._evidences[self._fingerprint_to_id[fingerprint]]
+        else:
+            self._evidences[evidence.evidence_id] = evidence
+            self._fingerprint_to_id[fingerprint] = evidence.evidence_id
+            self._next_id += 1
+            return evidence
 
     def get(self, evidence_id: str) -> Evidence | None:
         return self._evidences.get(evidence_id)
@@ -48,13 +64,18 @@ class EvidenceStore:
 
     def __len__(self) -> int:
         return len(self._evidences)
-if __name__ == "__main__":
-
-    evidence = Evidence(
-        evidence_id="E1",
-        source_type="web_page",
-        content="MCP 是一种连接 AI 应用与外部系统的开放协议。",
-        title="MCP Introduction",
-        uri="https://example.com/mcp"
-    )
-    print(evidence.model_dump())
+def build_evidence_fingerprint(
+    *,
+    source_type: str,
+    uri: str | None,
+    locator: str | None,
+    content: str,
+) -> str:
+    fingerprint={
+        "source_type": source_type,
+        "uri": uri,
+        "locator": locator,
+        "content": content
+    }
+    fingerprint_str =json.dumps(fingerprint, sort_keys=True,ensure_ascii=False)
+    return fingerprint_str
