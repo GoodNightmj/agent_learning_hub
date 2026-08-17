@@ -13,6 +13,7 @@ class MemoryStore:
             return json.load(f)
 
     def save(self) -> None:
+        Path(self.file_path).parent.mkdir(parents=True, exist_ok=True)
         with open(self.file_path, "w", encoding="utf-8") as f:
             json.dump(self.memories, f, ensure_ascii=False, indent=2)
 
