@@ -14,8 +14,8 @@ class Evidence(BaseModel):
 class EvidenceStore:
 
     def __init__(self) -> None:
-        self.evidence={}
-        self.next_id=1
+        self._evidences={}
+        self._next_id=1
     def add(
         self,
         *,
@@ -26,28 +26,28 @@ class EvidenceStore:
         metadata: dict[str, Any] | None = None,
     ) -> Evidence:
         evidence = Evidence(
-            evidence_id=f"E{self.next_id}",
+            evidence_id=f"E{self._next_id}",
             source_type=source_type,
             content=content,
             title=title,
             uri=uri,
-            metadata=metadata or {}
+            metadata=metadata if metadata is not None else {}
         )
-        self.evidence[evidence.evidence_id] = evidence
-        self.next_id += 1
+        self._evidences[evidence.evidence_id] = evidence
+        self._next_id += 1
         return evidence
 
     def get(self, evidence_id: str) -> Evidence | None:
-        return self.evidence.get(evidence_id)
+        return self._evidences.get(evidence_id)
 
     def contains(self, evidence_id: str) -> bool:
-        return evidence_id in self.evidence
+        return evidence_id in self._evidences   
 
     def all(self) -> list[Evidence]:
-        return list(self.evidence.values())
+        return list(self._evidences.values())
 
     def __len__(self) -> int:
-        return len(self.evidence)
+        return len(self._evidences)
 if __name__ == "__main__":
 
     evidence = Evidence(
