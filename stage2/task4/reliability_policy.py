@@ -1,3 +1,4 @@
+import json
 def make_tool_call_fingerprint(
     tool_name: str,
     arguments: dict
@@ -6,7 +7,7 @@ def make_tool_call_fingerprint(
         "tool_name": tool_name,
         "arguments": arguments
     }
-    import json
+    
     json_string = json.dumps(dict_to_hash, sort_keys=True,ensure_ascii=False)
     return json_string
 def is_repeated_call(
@@ -22,10 +23,11 @@ def should_retry(
     retry_count: int,
     max_retries: int = 2
 ) -> bool:
+    error=str(result.get("error","")).lower()
     if result.get("success") is not False:
         return False
     if retry_count >= max_retries:
         return False
-    if result.get("error") and ("超时" in str(result.get("error")) or "timeout" in str(result.get("error"))or "network" in str(result.get("error")) or "连接" in str(result.get("error"))):
+    if error and ("超时" in error or "timeout" in error or "network" in error or "连接" in error):
         return True
     return False
