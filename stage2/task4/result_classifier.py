@@ -1,4 +1,8 @@
-def is_empty_data(data: dict) -> bool:
+
+from typing import Any
+
+
+def is_empty_data(data: Any) -> bool:
     if data is None:
         return True
     if isinstance(data, (dict,list,set,tuple)) and not data:
