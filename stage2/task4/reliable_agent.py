@@ -28,19 +28,12 @@ def execute_tool_call_reliably(
         arguments_dict = json.loads(arguments)
     except json.JSONDecodeError:
         return{
-            "tool_call_id": tool_call.id,
-            "tool_name": tool_name,
-            "tool_arguments": arguments,
-            "status": "failure",
-            "result": {
-                "success": False,
-                "data": None,
-                "error": "Invalid JSON in tool call arguments",
-                "meta": {
-                    "tool_name": tool_name,
-                    "raw_result": None
-                }
-            }
+            "success": False,
+            "data": None, 
+            "error": f"工具参数不是合法 JSON：{arguments}",
+            "meta": {
+                "tool_name": tool_name,},
+            "status": "failure"
         }
     fingerprint = make_tool_call_fingerprint(tool_name, arguments_dict)
     if is_repeated_call(fingerprint, call_history, max_same_calls):
@@ -50,7 +43,8 @@ def execute_tool_call_reliably(
             "error": f"相同的工具调用已达到最大次数 {max_same_calls}，不再执行",
             "meta": {
                 "tool_name": tool_name,
-            }
+            },
+            "status": "failure"
         }
     else:
         call_history.append(fingerprint)
@@ -58,7 +52,7 @@ def execute_tool_call_reliably(
     result=normalize_tool_result(tool_name, raw_result)
     status=classify_tool_result(result)
     retry_count=0
-    while should_retry(result, retry_count, max_retries) and status=="failure":
+    while should_retry(result, retry_count, max_retries):
         retry_count += 1
         raw_result = run_tool(tool_name, arguments_dict)
         result=normalize_tool_result(tool_name, raw_result)
@@ -77,9 +71,9 @@ def run_agent(
     user_query: str,
     tools: list[dict],
     model: str,
-    call_history: list[str],
     max_steps: int = 5
 ) -> str|dict:
+    call_history = []
     messages = [
         {
             "role": "system",

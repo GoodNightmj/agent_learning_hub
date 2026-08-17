@@ -24,10 +24,12 @@ def should_retry(
     max_retries: int = 2
 ) -> bool:
     error=str(result.get("error","")).lower()
-    if result.get("success") is not False:
-        return False
     if retry_count >= max_retries:
         return False
+    if result.get("success") is True:
+        return False
+    
     if error and ("超时" in error or "timeout" in error or "network" in error or "连接" in error):
         return True
     return False
+
