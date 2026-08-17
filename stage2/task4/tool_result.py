@@ -58,14 +58,12 @@ def normalize_tool_result(
         else:
             return {
                 "success": True,
-                "data": {
-                    "url": raw_result.get("url"),
-                    "title": raw_result.get("title"),
-                    "content": raw_result.get("content")
-                },
+                "data":  raw_result.get("content"),
                 "error": None,
                 "meta": {
                     "tool_name": tool_name,
+                    "url": raw_result.get("url"),
+                    "title": raw_result.get("title"),
                     "raw_result": raw_result
                 }
             }
@@ -111,3 +109,13 @@ def normalize_tool_result(
                     "raw_result": raw_result
                 }
             }
+    else:
+        return{
+            "success": False,
+            "data":None,
+            "error": f"未知的工具名称: {tool_name}",
+            "meta": {
+                "tool_name": tool_name,
+                "raw_result": raw_result
+            }
+        }
