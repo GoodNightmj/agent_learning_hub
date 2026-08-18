@@ -30,15 +30,6 @@ class EvidenceStore:
         cleaned_content = content.strip()
         if not cleaned_content:
             raise ValueError("content 不能为 None 或空字符串")
-        evidence = Evidence(
-            evidence_id=f"E{self._next_id}",
-            source_type=source_type,
-            content=cleaned_content,
-            title=title,
-            uri=uri,
-            metadata=metadata if metadata is not None else {},
-            locator=locator
-        )
         fingerprint = build_evidence_fingerprint(
             source_type=source_type,
             uri=uri,
@@ -48,6 +39,15 @@ class EvidenceStore:
         if fingerprint in self._fingerprint_to_id:
             return self._evidences[self._fingerprint_to_id[fingerprint]]
         else:
+            evidence = Evidence(
+                        evidence_id=f"E{self._next_id}",
+                        source_type=source_type,
+                        content=cleaned_content,
+                        title=title,
+                        uri=uri,
+                        metadata=metadata if metadata is not None else {},
+                        locator=locator
+                    )
             self._evidences[evidence.evidence_id] = evidence
             self._fingerprint_to_id[fingerprint] = evidence.evidence_id
             self._next_id += 1
