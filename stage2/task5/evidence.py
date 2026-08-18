@@ -1,3 +1,4 @@
+from calendar import c
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -11,6 +12,7 @@ class Evidence(BaseModel):
     title: str | None = None
     uri: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+    citation_eligible: bool = True
 class EvidenceStore:
 
     def __init__(self) -> None:
@@ -25,7 +27,8 @@ class EvidenceStore:
         title: str | None = None,
         uri: str | None = None,
         metadata: dict[str, Any] | None = None,
-        locator: str | None = None
+        locator: str | None = None,
+        citation_eligible: bool = True
     ) -> Evidence:
         cleaned_content = content.strip()
         if not cleaned_content:
@@ -46,7 +49,8 @@ class EvidenceStore:
                         title=title,
                         uri=uri,
                         metadata=metadata if metadata is not None else {},
-                        locator=locator
+                        locator=locator,
+                        citation_eligible=citation_eligible
                     )
             self._evidences[evidence.evidence_id] = evidence
             self._fingerprint_to_id[fingerprint] = evidence.evidence_id
