@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 import json 
-
+import hashlib
 class Evidence(BaseModel):
     locator: str | None = None
     evidence_id: str
@@ -78,4 +78,4 @@ def build_evidence_fingerprint(
         "content": content
     }
     fingerprint_str =json.dumps(fingerprint, sort_keys=True,ensure_ascii=False)
-    return fingerprint_str
+    return hashlib.sha256(fingerprint_str.encode("utf-8")).hexdigest()
