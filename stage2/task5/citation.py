@@ -1,7 +1,6 @@
 import re
 
 from pydantic import BaseModel
-from regex import T
 
 from stage2.task5.evidence import Evidence, EvidenceStore
 
@@ -20,7 +19,12 @@ def format_evidence_context(
     context_list = []
     for evidence in evidences:
         if evidence.citation_eligible is True:
-            context_list.append(f"""引用的证据内容:evidence_id为 {evidence.evidence_id}\n标题为 {evidence.title}\n内容为 {evidence.content}\n来源为 {evidence.uri}\n位置为 {evidence.locator}\n""")
+            context_list.append(f"""
+            [{evidence.evidence_id}]\n
+            标题: {evidence.title}\n
+            内容: {evidence.content}\n
+            来源: {evidence.uri}\n
+            位置: {evidence.locator}\n""")
         else:
             continue
     return "\n\n".join(context_list)
