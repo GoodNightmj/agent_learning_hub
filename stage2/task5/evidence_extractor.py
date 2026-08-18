@@ -15,6 +15,9 @@ def extract_web_search_evidence(
         content=item.get("content")
         if not content:
             continue
+        meta=tool_result.get("meta",{})
+        raw_result = meta.get("raw_result", {})
+        query = raw_result.get("query")
         evidence=store.add(
             source_type="web_search",
             content=content,
@@ -22,7 +25,7 @@ def extract_web_search_evidence(
             uri=item.get("url"),
             locator=None,
             citation_eligible=False,
-            metadata={"score": item.get("score"),"query": tool_result.get("query")}
+            metadata={"score": item.get("score"),"query": query}
         )
         extracted.append(evidence)
     return extracted
