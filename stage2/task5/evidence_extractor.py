@@ -1,43 +1,54 @@
-from stage2.task5.evidence import Evidence, EvidenceStore, build_evidence_fingerprint
+from stage2.task5.evidence import Evidence, EvidenceStore
 def extract_web_search_evidence(
     tool_result: dict,
     store: EvidenceStore,
 ) -> list[Evidence]:
-    if not tool_result.get("success"):
+    if tool_result.get("success")is not True:
         return []
     data=tool_result.get("data")#type: ignore
-    if not tool_result.get("data").get("content"):#type: ignore
-        return store.all()
-    store.add(
-        source_type="web_search",
-        content=data.get("content"),
-        title=data.get("title"),
-        uri=data.get("url"),
-        locator=None,
-        citation_eligible=False,
-        metadata={
-            "score": data.get("score"),
-            "query": tool_result.get("meta").get("raw_result").get("query")#type: ignore
-        }
-    ))
-    return store.all()
+    if not isinstance(data,list):
+        return []
+    extracted=[]
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        content=item.get("content")
+        if not content:
+            continue
+        evidence=store.add(
+            source_type="web_search",
+            content=content,
+            title=item.get("title"),
+            uri=item.get("url"),
+            locator=None,
+            citation_eligible=False,
+            metadata={"score": item.get("score"),"query": tool_result.get("query")}
+        )
+        extracted.append(evidence)
+    return extracted
 
 def extract_webpage_evidence(
     tool_result: dict,
     store: EvidenceStore,
 ) -> list[Evidence]:
-    if not tool_result.get("success"):
+    if tool_result.get("success") is not True:
         return []
-    data=tool_result.get("data")#type: ignore
-    if not tool_result.get("data").get("content"):#type: ignore
-        return store.all()
-    store.add(
-        source_type="fetch_webpage",
-        content=data.get("content"),
-        title=data.get("title"),
-        uri=data.get("url"),
+    content=tool_result.get("data")
+    if not isinstance(content, str):
+        return []
+    meta=tool_result.get("meta")
+    title=tool_result.get("meta",{}).get("title")
+    url=tool_result.get("meta",{}).get("url")
+    source_type="web_page"
+    if not content:
+        return []
+    evidence=store.add(
+        source_type=source_type,
+        content=content,
+        title=title,
+        uri=url,
         locator=None,
         citation_eligible=True,
-        metadata={}
-    ))
-    return store.all()
+        metadata={},
+    )
+    return [evidence]
