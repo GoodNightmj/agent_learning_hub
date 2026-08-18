@@ -8,6 +8,9 @@ def extract_web_search_evidence(
     data=tool_result.get("data")#type: ignore
     if not isinstance(data,list):
         return []
+    meta=tool_result.get("meta",{})
+    raw_result = meta.get("raw_result", {})
+    query = raw_result.get("query")
     extracted=[]
     for item in data:
         if not isinstance(item, dict):
@@ -15,9 +18,7 @@ def extract_web_search_evidence(
         content=item.get("content")
         if not content:
             continue
-        meta=tool_result.get("meta",{})
-        raw_result = meta.get("raw_result", {})
-        query = raw_result.get("query")
+        
         evidence=store.add(
             source_type="web_search",
             content=content,
