@@ -5,7 +5,32 @@ import re
 from pydantic import BaseModel
 
 from stage2.task5.citation import extract_citation_ids
+from typing import Literal
 
+from stage2.task5.citation import (
+    CitationValidationResult,
+    format_evidence_context,
+    validate_citations,
+)
+from stage2.task5.evidence import EvidenceStore
+
+
+class SupportJudgment(BaseModel):
+    verdict: Literal["supported", "partial", "unsupported"]
+    reason: str
+
+
+class ClaimSupportResult(BaseModel):# 针对一句话
+    claim: str
+    citation_ids: list[str]
+    verdict: Literal["supported", "partial", "unsupported"]
+    reason: str
+
+
+class AnswerSupportResult(BaseModel):#针对整段话
+    citation_validation: CitationValidationResult
+    claim_results: list[ClaimSupportResult]
+    is_valid: bool
 
 class CitedClaim(BaseModel):
     text: str
@@ -26,107 +51,92 @@ def extract_cited_claims(answer: str) -> list[CitedClaim]: #提取答案中的�
     return cited_claims
 
 
-from typing import Literal
 
-from stage2.task5.citation import (
-    CitationValidationResult,
-    format_evidence_context,
-    validate_citations,
-)
-from stage2.task5.evidence import EvidenceStore
-
-
-class SupportJudgment(BaseModel):
-    verdict: Literal["supported", "partial", "unsupported"]
-    reason: str
-
-
-class ClaimSupportResult(BaseModel):
-    claim: str
-    citation_ids: list[str]
-    verdict: Literal["supported", "partial", "unsupported"]
-    reason: str
-
-
-class AnswerSupportResult(BaseModel):
-    citation_validation: CitationValidationResult
-    claim_results: list[ClaimSupportResult]
-    is_valid: bool
 def  judge_claim_support(
     client,
     model: str,
     claim: CitedClaim,
     store: EvidenceStore,
 ) -> ClaimSupportResult:
+    evidences=[]
     for citation_id in claim.citation_ids:
-        evidence = store.get(citation_id)
-        if evidence is not None and evidence.citation_eligible is True:
-            evidence_context = format_evidence_context([evidence])
-            prompt = f"""
-            你是严格的证据支持度审查器，只能根据提供的证据判断 Claim，
-            不得使用外部知识。
+        if store.get(citation_id) and store.get(citation_id).citation_eligible:
+            evidences.append(store.get(citation_id))
+    if not evidences:
+        return ClaimSupportResult(
+            claim=claim.text,
+            citation_ids=claim.citation_ids,
+            verdict="unsupported",
+            reason="没有提供有效的证据支持该主张"
+        )
+    evidence_context=format_evidence_context(evidences)
+    prompt="""
+你是严格的证据支持度审查器，只能根据提供的证据判断 Claim，
+不得使用外部知识。
 
-            判断标准：
-            - supported：证据直接支持 Claim 的全部内容
-            - partial：证据只支持 Claim 的一部分
-            - unsupported：证据没有提到、无法推出或与 Claim 冲突
+判断标准：
+- supported：证据直接支持 Claim 的全部内容
+- partial：证据只支持 Claim 的一部分
+- unsupported：证据没有提到、无法推出或与 Claim 冲突
 
-            只输出 JSON：
+只输出 JSON：
+{
+  "verdict": "supported、partial 或 unsupported",
+  "reason": "简要说明依据"
+}"""
+    response=client.chat.completions.create(
+        model=model,
+        messages=[
             {
-            "verdict": "supported、partial 或 unsupported",
-            "reason": "简要说明依据"
+                "role": "system",
+                "content": prompt
+            },
+            {
+                "role": "user",
+                "content": f"Claim: {claim.text}\n\nEvidence:\n{evidence_context}"
             }
-            """
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": f"Claim: {claim.text}\nEvidence: {evidence_context}"}
-            ]
-            response = client.chat.complete.create(
-                model=model,
-                messages=messages,
-                response_format={"type": "json_object"},
-            )
-            if response is None:
-                raise ValueError("No response from the model.")
-            try:
-                judgment=SupportJudgment.model_validate_json(response.choices[0].message.content)
-            except ValueError as e:
-                raise ValueError(f"json 解析失败: {e}\nResponse content: {response.choices[0].message.content}")
-            verdict = judgment.verdict  
-            reason = judgment.reason    
-            return ClaimSupportResult(
-                claim=claim.text,
-                citation_ids=claim.citation_ids,
-                verdict=verdict,
-                reason=reason
-            )
-        elif evidence is not None and evidence.citation_eligible is False:
-            return ClaimSupportResult(
-                claim=claim.text,
-                citation_ids=claim.citation_ids,
-                verdict="unsupported",
-                reason="没有可用的引用证据支持该主张",
-            )
-        else:
-            return ClaimSupportResult(
-                            claim=claim.text,
-                            citation_ids=claim.citation_ids,
-                            verdict="unsupported",
-                            reason="没有可用的引用证据支持该主张",
-            )
-
-
+        ],
+        response_format={
+            "type": "json_format",}
+    )
+    judgment = SupportJudgment.model_validate_json(response.choices[0].message.content)
+    return ClaimSupportResult(
+        claim=claim.text,
+        citation_ids=claim.citation_ids,
+        verdict=judgment.verdict,
+        reason=judgment.reason
+    )
+        
 def validate_answer_support(
     client,
     model: str,
     answer: str,
     store: EvidenceStore,
 ) -> AnswerSupportResult:
-    validation_result = validate_citations(answer, store)
-    cited_claims = extract_cited_claims(answer)
-    claim_results = []
+    citation_validation=validate_citations(answer,store)
+    cited_claims=extract_cited_claims(answer)
+    claim_results=[]
+    bad_ids=citation_validation.invalid_ids+citation_validation.ineligible_ids
     for claim in cited_claims:
-        claim_result = judge_claim_support(client, model, claim, store)
         if claim.citation_ids is None:
-            
-        
+            claim_results.append(ClaimSupportResult(
+                claim=claim.text,
+                citation_ids=[],
+                verdict="unsupported",
+                reason="没有提供证据"
+            ))
+        elif claim.citation_ids in bad_ids:
+            claim_results.append(ClaimSupportResult(
+                claim=claim.text,
+                citation_ids=claim.citation_ids,
+                verdict="unsupported",
+                reason="提供的证据无效或不符合要求"
+            ))
+        else:
+            claim_results.append(judge_claim_support(client,model,claim,store))
+    is_valid=all(result.verdict=="supported" for result in claim_results) 
+    return AnswerSupportResult(
+        citation_validation=citation_validation,
+        claim_results=claim_results,
+        is_valid=is_valid
+    )
