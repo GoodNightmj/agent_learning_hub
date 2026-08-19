@@ -13,7 +13,7 @@ class CitationValidationResult(BaseModel):
     is_valid: bool
 
 
-def format_evidence_context(
+def format_evidence_context( #将证据列表格式化为字符串喂给模型
     evidences: list[Evidence],
 ) -> str:
     context_list = []
@@ -29,14 +29,14 @@ def format_evidence_context(
             continue
     return "\n\n".join(context_list)
 
-def extract_citation_ids(answer: str) -> list[str]:
+def extract_citation_ids(answer: str) -> list[str]:#提取答案中的证据id
     pattern=r"\[(E\d+)\]"
     matches=re.findall(pattern,answer)
     results=list(dict.fromkeys(matches))
     return results
 
 
-def validate_citations(
+def validate_citations(# 验证答案中的证据id是否有效
     answer: str,
     store: EvidenceStore,
 ) -> CitationValidationResult:
