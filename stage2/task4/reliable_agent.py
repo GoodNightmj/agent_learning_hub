@@ -50,8 +50,12 @@ def execute_tool_call_reliably(
         call_history.append(fingerprint)
     raw_result = run_tool(tool_name, arguments_dict)
     result=normalize_tool_result(tool_name, raw_result)
-    status=classify_tool_result(result)
     retry_count=0
+    meta=dict(result.get("meta",{}))
+    meta["tool_name"]=tool_name
+    meta["retry_count"]=retry_count
+    status=classify_tool_result(result)
+    
     while should_retry(result, retry_count, max_retries):
         retry_count += 1
         raw_result = run_tool(tool_name, arguments_dict)
@@ -62,9 +66,7 @@ def execute_tool_call_reliably(
         "success": result.get("success"),
         "data": result.get("data"),
         "error": result.get("error"),
-        "meta": {
-            "tool_name": tool_name,
-        }
+        "meta": meta
     }
 def run_agent(
     client,
