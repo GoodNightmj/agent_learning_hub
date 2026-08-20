@@ -37,7 +37,7 @@ class CitedClaim(BaseModel):
 
 
 def extract_cited_claims(answer: str) -> list[CitedClaim]: #提取答案中的主张和对应的证据id
-    sentences = re.findall(r".+?[。！？.!?](?:\s*\[E\d+\])*", answer.strip(),flags=re.S)
+    sentences = re.findall(r".+?[。！？.!?](?:\s*\[E\d+\])*|.+$", answer.strip(),flags=re.S)
     cited_claims = []
     for sentence in sentences:
         sentence = sentence.strip()
