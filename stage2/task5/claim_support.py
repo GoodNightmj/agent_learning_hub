@@ -37,7 +37,7 @@ class CitedClaim(BaseModel):
 
 
 def extract_cited_claims(answer: str) -> list[CitedClaim]: #提取答案中的主张和对应的证据id
-    sentences = re.split(r"(?<=[。！？.!?])\s*", answer.strip())
+    sentences = re.findall(r".+?[。！？.!?](?:\s*\[E\d+\])*", answer.strip(),flags=re.S)
     cited_claims = []
     for sentence in sentences:
         sentence = sentence.strip()
@@ -46,6 +46,8 @@ def extract_cited_claims(answer: str) -> list[CitedClaim]: #提取答案中的�
         citation_ids = extract_citation_ids(sentence)
         # Remove citation ids from the sentence
         claimed_text=re.sub(r'\[E\d+\]', '', sentence).strip()
+        if not claimed_text:
+            continue
         cited_claims.append(CitedClaim(text=claimed_text, citation_ids=citation_ids))
     return cited_claims
 
