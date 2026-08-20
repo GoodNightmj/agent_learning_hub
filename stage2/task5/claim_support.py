@@ -1,5 +1,4 @@
-from math import e
-from pyexpat.errors import messages
+
 import re
 
 from pydantic import BaseModel
@@ -60,8 +59,9 @@ def  judge_claim_support(
 ) -> ClaimSupportResult:
     evidences=[]
     for citation_id in claim.citation_ids:
-        if store.get(citation_id) and store.get(citation_id).citation_eligible:
-            evidences.append(store.get(citation_id))
+        evidence=store.get(citation_id)
+        if evidence and evidence.citation_eligible:
+            evidences.append(evidence)
     if not evidences:
         return ClaimSupportResult(
             claim=claim.text,
@@ -97,7 +97,7 @@ def  judge_claim_support(
             }
         ],
         response_format={
-            "type": "json_format",}
+            "type": "json_object",}
     )
     judgment = SupportJudgment.model_validate_json(response.choices[0].message.content)
     return ClaimSupportResult(
@@ -116,25 +116,25 @@ def validate_answer_support(
     citation_validation=validate_citations(answer,store)
     cited_claims=extract_cited_claims(answer)
     claim_results=[]
-    bad_ids=citation_validation.invalid_ids+citation_validation.ineligible_ids
+    bad_ids=set(citation_validation.invalid_ids+citation_validation.ineligible_ids) 
     for claim in cited_claims:
-        if claim.citation_ids is None:
+        if not claim.citation_ids  :
             claim_results.append(ClaimSupportResult(
                 claim=claim.text,
                 citation_ids=[],
                 verdict="unsupported",
                 reason="没有提供证据"
             ))
-        elif claim.citation_ids in bad_ids:
+        elif any(cid in bad_ids for cid in claim.citation_ids):
             claim_results.append(ClaimSupportResult(
                 claim=claim.text,
                 citation_ids=claim.citation_ids,
                 verdict="unsupported",
-                reason="提供的证据无效或不符合要求"
+                reason="引用了无效或不合格的证据"
             ))
         else:
             claim_results.append(judge_claim_support(client,model,claim,store))
-    is_valid=all(result.verdict=="supported" for result in claim_results) 
+    is_valid=(citation_validation.is_valid and bool(claim_results) and all(cr.verdict!="unsupported" for cr in claim_results))
     return AnswerSupportResult(
         citation_validation=citation_validation,
         claim_results=claim_results,
