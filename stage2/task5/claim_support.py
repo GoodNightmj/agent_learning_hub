@@ -134,7 +134,13 @@ def validate_answer_support(
             ))
         else:
             claim_results.append(judge_claim_support(client,model,claim,store))
-    is_valid=(citation_validation.is_valid and bool(claim_results) and all(cr.verdict!="unsupported" for cr in claim_results))
+    is_valid = (citation_validation.is_valid
+    and bool(claim_results)
+    and all(
+        cr.verdict == "supported"
+        for cr in claim_results
+    )
+)
     return AnswerSupportResult(
         citation_validation=citation_validation,
         claim_results=claim_results,
