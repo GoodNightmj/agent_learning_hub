@@ -51,9 +51,7 @@ def execute_tool_call_reliably(
     raw_result = run_tool(tool_name, arguments_dict)
     result=normalize_tool_result(tool_name, raw_result)
     retry_count=0
-    meta=dict(result.get("meta",{}))
-    meta["tool_name"]=tool_name
-    meta["retry_count"]=retry_count
+    
     status=classify_tool_result(result)
     
     while should_retry(result, retry_count, max_retries):
@@ -61,6 +59,9 @@ def execute_tool_call_reliably(
         raw_result = run_tool(tool_name, arguments_dict)
         result=normalize_tool_result(tool_name, raw_result)
         status=classify_tool_result(result)
+    meta=dict(result.get("meta",{}))
+    meta["tool_name"]=tool_name
+    meta["retry_count"]=retry_count
     return {
         "status": status,
         "success": result.get("success"),

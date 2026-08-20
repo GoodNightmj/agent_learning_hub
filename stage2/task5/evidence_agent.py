@@ -1,17 +1,20 @@
 
-from json import dumps
+import json
 
-from pydantic import BaseModel, json
+from pydantic import BaseModel, Field
 
-from pydantic import Field
-from stage2.task2.agent import call_model_message, execute_tool_calls
-from stage2.task5.evidence import Evidence, EvidenceStore
-from stage2.task5.claim_support import AnswerSupportResult
-from stage2.task2.tool_schema import TOOL_SCHEMA
-from stage2.task5.evidence import Evidence
-from stage2.task5.claim_support import validate_answer_support
+from stage2.task2.agent import call_model_message
 from stage2.task4.reliable_agent import execute_tool_calls_reliably
-from stage2.task5.evidence_extractor import extract_web_search_evidence, extract_webpage_evidence
+from stage2.task5.claim_support import (
+    AnswerSupportResult,
+    validate_answer_support,
+)
+from stage2.task5.evidence import Evidence, EvidenceStore
+from stage2.task5.evidence_extractor import (
+    extract_web_search_evidence,
+    extract_webpage_evidence,
+)
+
 class EvidenceAgentResult(BaseModel):
     success: bool
     answer: str | None = None
@@ -28,19 +31,38 @@ def run_evidence_agent(
 ) -> EvidenceAgentResult:
     store = EvidenceStore()
     call_history = []
-    messages = []
+    messages = [
+        {
+            "role": "system",
+            "content": """
+你是一个基于证据回答问题的助手。
+
+规则：
+1. web_search 结果只能用于寻找网页，不能作为最终引用。
+2. 需要调用 fetch_webpage 获取可引用的网页正文。
+3. 只能引用工具消息中提供的 Evidence ID。
+4. 最终事实性陈述后使用 [E1] 格式标注来源。
+5. citation_eligible=false 的证据不能引用。
+6. 证据不足时明确说明，不得编造事实或 Evidence ID。"""
+        },
+        {
+            "role": "user",
+            "content": user_query
+        }
+    ]
     for step in range(max_steps):
         message=call_model_message(client, messages=messages, tools=tools, model=model)
         if not message.tool_calls:
-            content=message.content
+            content=message.content or ""
             validation=validate_answer_support(client, model, content, store)
-            if validation.is_valid:
-                success=True
-            else:
-                success=False
+            success=validation.is_valid
             #从答案中提取证据id，并从store中获取对应的证据
             cited_ids=validation.citation_validation.cited_ids
-            sources=[store.get(cid) for cid in cited_ids if store.get(cid) is not None]
+            sources=[]
+            for cited_id in cited_ids:
+                evidence=store.get(cited_id)
+                if evidence is not None and evidence.citation_eligible:
+                    sources.append(evidence)
             return EvidenceAgentResult(
                 success=success,
                 answer=content,
@@ -55,13 +77,40 @@ def run_evidence_agent(
             execute_results=execute_tool_calls_reliably(tool_calls, call_history)
             
             for execute_result in execute_results:
-                if execute_result["meta"].get("tool_name")=="web_search":
-                    extracted_evidences=extract_web_search_evidence(execute_result, store)
-                elif execute_result["meta"].get("tool_name")=="fetch_webpage":
-                    extracted_evidences=extract_webpage_evidence(execute_result, store)
+                tool_name=execute_result["tool_name"]
+                normalized_result=execute_result["result"]
+                if tool_name=="web_search":
+                    extracted_evidences=extract_web_search_evidence(
+                        normalized_result,
+                        store,
+                    )
+                elif tool_name=="fetch_webpage":
+                    extracted_evidences=extract_webpage_evidence(
+                        normalized_result,
+                        store,
+                    )
                 else:
                     extracted_evidences=[]
-                messages.append({"role": "tool", "content": json.dumps(execute_result["data"]),"tool_call_id": execute_result["tool_call_id"]})
+
+                evidence_refs = [
+                    {
+                        "evidence_id": evidence.evidence_id,
+                        "title": evidence.title,
+                        "uri": evidence.uri,
+                        "citation_eligible": evidence.citation_eligible,
+                    }
+                    for evidence in extracted_evidences
+                ]
+                tool_payload = {
+                    "tool_result": normalized_result,
+                    "evidence_refs": evidence_refs,
+                }
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": execute_result["tool_call_id"],
+                    "content": json.dumps(tool_payload, ensure_ascii=False),
+                })
+
     return EvidenceAgentResult(
         success=False,
         answer=None,
