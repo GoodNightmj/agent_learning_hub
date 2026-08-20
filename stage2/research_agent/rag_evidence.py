@@ -32,15 +32,16 @@ def build_rag_evidence(
         chunk_info = retrieved["chunk_information"]
         score = retrieved["score"]
         evidence = store.add(
-            locator=f"""chunk_id={chunk_info['chunk_id']}\n
-            chars={chunk_info['start']}-{chunk_info['end']}\n""",
+            locator=f"chunk_id={chunk_info['chunk_id']};chars={chunk_info['start']}-{chunk_info['end']}",
             source_type="local_document",
             content=chunk_info["text"],
             title=document_title ,
             uri=document_uri,
             metadata={
-                "document_title":document_title,
-                "score":score
+                "score":score,
+                "chunk_id": chunk_info["chunk_id"],
+                "start": chunk_info["start"],
+                "end": chunk_info["end"]
             },
             citation_eligible=True
         )
