@@ -66,7 +66,7 @@ def run_research_agent(
         8. 证据不足要明确说明。"""},
         {
             "role": "user",
-            "content": user_query+rag_context
+            "content": f'用户问题: {user_query}\n\n参考资料:\n{rag_context}'
         },
     ]
     for step in range(max_steps):
@@ -81,10 +81,16 @@ def run_research_agent(
                 store=store
             )
             success = validation.is_valid
+            sources = []
+            cited_ids = validation.citation_validation.cited_ids
+            for cited_id in cited_ids:
+                evidence = store.get(cited_id)
+                if evidence is not None and evidence.citation_eligible:
+                    sources.append(evidence)
             return ResearchAgentResult(
                 success=success,
                 answer=answer,
-                sources=rag_evidences,
+                sources=sources,
                 validation=validation,
                 error=None
             )
@@ -124,10 +130,10 @@ def run_research_agent(
                 "tool_call_id": execute_result["tool_call_id"],
                 "content": json.dumps(tool_payload, ensure_ascii=False)
             })
-        return ResearchAgentResult(
+    return ResearchAgentResult(
             success=False,
             answer=None,
-            sources=rag_evidences,
+            sources=[],
             validation=None,
             error="Max steps reached without a valid answer."
-        )
+    )
