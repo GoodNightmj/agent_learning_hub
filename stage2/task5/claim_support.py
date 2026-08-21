@@ -43,6 +43,9 @@ def extract_cited_claims(answer: str) -> list[CitedClaim]: #提取答案中的�
         sentence = sentence.strip()
         if not sentence:
             continue
+        pattern = r"^\s*\d+\.\s*$"
+        if re.match(pattern, sentence):
+            continue
         citation_ids = extract_citation_ids(sentence)
         # Remove citation ids from the sentence
         claimed_text=re.sub(r'\[E\d+\]', '', sentence).strip()
