@@ -32,7 +32,7 @@ def format_evidence_context( #将证据列表格式化为字符串喂给模型
 def extract_citation_ids(answer: str) -> list[str]:#提取答案中的证据id
     pattern=r"\[(E\d+)\]"
     matches=re.findall(pattern,answer)
-    results=list(dict.fromkeys(matches))
+    results=list(dict.fromkeys(matches).keys())#去重
     return results
 
 
