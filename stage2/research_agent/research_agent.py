@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from stage2.research_agent.revision import revise_answer
 from stage2.task2.agent import call_model_message
 from stage2.task3.context_manager import compress_context
 from stage2.task3.memory_context import build_request_messages
@@ -42,7 +43,7 @@ RESEARCH_SYSTEM_PROMPT = """
 你是一个研究助理，用户会给你一个问题和一些参考资料，你需要根据这些参考资料来回答用户的问题。
 请严格按照以下要求来回答问题：
 1. 已提供的 Local Evidence 可以直接引用。
-                        
+
 2. web_search 只能用于找候选网页，
 Search Evidence 不能作为最终引用。
 
@@ -84,11 +85,12 @@ def run_research_agent(
     tools: list[dict],
     model: str,
     max_steps: int = 6,
+    max_revisions: int = 1,
     keep_recent_turns: int = 3,
 ) -> ResearchAgentResult:
     session = session_manager.get_or_create_session(session_id=session_id)
     session_messages = session["messages"]
-    session_messages[0]["content"]= RESEARCH_SYSTEM_PROMPT
+    session_messages[0]["content"] = RESEARCH_SYSTEM_PROMPT
     relevant_memory = get_relevant_memory_message(
         memory_store, user_id, embedding_model, user_query)
     request_messages = build_request_messages(
@@ -119,6 +121,40 @@ def run_research_agent(
             client, messages=request_messages, model=model, tools=tools)
         if not message.tool_calls:
             answer = message.content or ""
+            validation = validate_answer_support(
+                client=client,
+                model=model,
+                answer=answer,
+                store=store
+            )
+            revision_count = 0
+            while (
+                not validation.is_valid
+                and revision_count < max_revisions
+            ):
+                answer = revise_answer(
+                client,
+                model=model,
+                user_query=user_query,
+                draft_answer=answer,
+                validation=validation,
+                store=store,
+                )
+
+                revision_count += 1
+                validation = validate_answer_support(
+                client=client,
+                model=model,
+                answer=answer,
+                store=store,
+                )
+            
+            sources = []
+            cited_ids = validation.citation_validation.cited_ids
+            for cited_id in cited_ids:
+                evidence = store.get(cited_id)
+                if evidence is not None and evidence.citation_eligible:
+                    sources.append(evidence)
             session_answer = strip_citations(answer)
             session_messages.append({
                 "role": "user",
@@ -128,21 +164,8 @@ def run_research_agent(
                 "role": "assistant",
                 "content": session_answer
             })
-            validation = validate_answer_support(
-                client=client,
-                model=model,
-                answer=answer,
-                store=store
-            )
             success = validation.is_valid
-            sources = []
-            cited_ids = validation.citation_validation.cited_ids
-            for cited_id in cited_ids:
-                evidence = store.get(cited_id)
-                if evidence is not None and evidence.citation_eligible:
-                    sources.append(evidence)
-            compress_context(session, client, model,
-                             keep_recent_turns=keep_recent_turns)
+            compress_context(session, client, model, keep_recent_turns=keep_recent_turns)
             current_memory = memory_store.get_memories(user_id)
             extraction = extract_memory_candidates(
                 client=client,
@@ -155,12 +178,15 @@ def run_research_agent(
                 user_id=user_id,
                 extraction=extraction
             )
+            error=None
+            if not success:
+                error=f"Answer validation failed after{revision_count} revisions."
             return ResearchAgentResult(
                 success=success,
                 answer=answer,
                 sources=sources,
                 validation=validation,
-                error=None
+                error=error
             )
         request_messages.append(message.model_dump(exclude_none=True))
         execute_results = execute_tool_calls_reliably(
