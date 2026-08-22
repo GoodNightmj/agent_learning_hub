@@ -111,7 +111,6 @@ def run_research_agent(
         "content": rag_context
     }
     request_messages.append(rag_messages)
-    start_index = len(request_messages)
     request_messages.append({
         "role": "user",
         "content": user_query
@@ -155,17 +154,19 @@ def run_research_agent(
                 evidence = store.get(cited_id)
                 if evidence is not None and evidence.citation_eligible:
                     sources.append(evidence)
-            session_answer = strip_citations(answer)
-            session_messages.append({
-                "role": "user",
-                "content": user_query
-            })
-            session_messages.append({
-                "role": "assistant",
-                "content": session_answer
-            })
+            
             success = validation.is_valid
-            compress_context(session, client, model, keep_recent_turns=keep_recent_turns)
+            if success:
+                session_answer = strip_citations(answer)
+                session_messages.append({
+                    "role": "user",
+                    "content": user_query
+                })
+                session_messages.append({
+                    "role": "assistant",
+                    "content": session_answer
+                })
+                compress_context(session, client, model, keep_recent_turns=keep_recent_turns)
             current_memory = memory_store.get_memories(user_id)
             extraction = extract_memory_candidates(
                 client=client,
@@ -180,7 +181,7 @@ def run_research_agent(
             )
             error=None
             if not success:
-                error=f"Answer validation failed after{revision_count} revisions."
+                error=f"Answer validation failed after\n{revision_count} revisions."
             return ResearchAgentResult(
                 success=success,
                 answer=answer,
