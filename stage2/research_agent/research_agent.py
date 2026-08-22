@@ -1,5 +1,9 @@
 from pydantic import BaseModel, Field
 from stage2.task2.agent import call_model_message
+from stage2.task3.context_manager import compress_context
+from stage2.task3.memory_context import build_request_messages
+from stage2.task3.memory_store import MemoryStore
+from stage2.task3.session_manager import SessionManager
 from stage2.task4.reliable_agent import execute_tool_calls_reliably
 from stage2.task5.citation import format_evidence_context
 from stage2.task5.evidence import Evidence
@@ -10,6 +14,7 @@ from stage2.task5.evidence_extractor import (
     extract_web_search_evidence,
     extract_webpage_evidence,
 )
+from stage2.task3.memory_agent import get_relevant_memory_message
 import json
 
 class ResearchAgentResult(BaseModel):
@@ -23,6 +28,10 @@ class ResearchAgentResult(BaseModel):
 def run_research_agent(
     client,
     *,
+    user_id: str,
+    session_id: str,
+    session_manager:SessionManager,
+    memory_store:MemoryStore,
     user_query: str,
     document_text: str,
     document_title: str,
@@ -31,7 +40,15 @@ def run_research_agent(
     tools: list[dict],
     model: str,
     max_steps: int = 6,
+    max_revisions: int = 3,
+    keep_recent_turns: int = 3,
 ) -> ResearchAgentResult:
+    session=session_manager.get_or_create_session(session_id=session_id)
+    session_messages=session["messages"]
+    system_prompt=session_messages[0]["content"]
+    relevant_memory = get_relevant_memory_message(memory_store, user_id, embedding_model, user_query)
+    request_messages =build_request_messages(session_messages, relevant_memory)
+    
     store = EvidenceStore()
     call_history = []
     rag_evidences = build_rag_evidence(
@@ -43,45 +60,19 @@ def run_research_agent(
         store=store
     )
     rag_context = format_evidence_context(rag_evidences)
-    messages = [
-        {"role": "system",
-         "content": """
-         你是一个研究助理，用户会给你一个问题和一些参考资料，你需要根据这些参考资料来回答用户的问题。
-        请严格按照以下要求来回答问题：
-        1. 已提供的 Local Evidence 可以直接引用。
-
-        2. web_search 只能用于找候选网页，
-        Search Evidence 不能作为最终引用。
-
-        3. 如果本地资料不足，可以调用 web_search。
-
-        4. 找到合适网页后使用 fetch_webpage 获取正文。
-
-        5. 只有 citation_eligible=true 的 Evidence 才能引用。
-
-        6. 最终事实性主张后必须使用 [E编号]。
-
-        7. 不得编造 Evidence ID。
-
-        8. 证据不足要明确说明。
-        9.如果标题本身表达事实，不要把标题和证据拆开；每个事实性句子都必须在本句末尾引用 Evidence。
-        举个例子，不要这样回答：
-        **web_search 搜索摘要不能作为最终引用。**
-        本地项目规定……。[E1]
-        而应该这样回答：
-        1. web_search 搜索摘要不能作为最终引用，因为本地项目规定它只用于发现候选网页。[E1]
-        10. 每个事实性 Claim 必须在同一句末尾附带 Evidence ID；
-            不要创建没有 Citation 的事实性标题。
-        如果使用列表，列表编号本身不包含语义。
-        """},
-        {
-            "role": "user",
-            "content": f'用户问题: {user_query}\n\n参考资料:\n{rag_context}'
-        },
-    ]
+    rag_messages = {
+            "role": "system",
+            "content": rag_context
+        }
+    request_messages.append(rag_messages)
+    start_index=len(request_messages)
+    request_messages.append({
+        "role": "user",
+        "content": user_query
+    })
     for step in range(max_steps):
         message = call_model_message(
-            client, messages=messages, model=model, tools=tools)
+            client, messages=request_messages, model=model, tools=tools)
         if not message.tool_calls:
             answer = message.content or ""
             validation = validate_answer_support(
@@ -97,6 +88,9 @@ def run_research_agent(
                 evidence = store.get(cited_id)
                 if evidence is not None and evidence.citation_eligible:
                     sources.append(evidence)
+            new_messages=request_messages[start_index:]
+            session["messages"].extend(new_messages)
+            compress_context(session, client, model)
             return ResearchAgentResult(
                 success=success,
                 answer=answer,
