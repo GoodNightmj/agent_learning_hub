@@ -32,8 +32,7 @@ def apply_defaults(payload: dict[str, Any]) -> dict[str, Any]:
     已经存在时不能覆盖。
     """
     # TODO: 由你实现
-    if "require_citations" not in payload:
-        payload["require_citations"] = True
+
     new_payload = payload.copy()
     new_payload.setdefault("max_results", 5)
     new_payload.setdefault("require_citations", True)
@@ -93,6 +92,6 @@ result = research_input_pipeline.invoke(
     }
 )
 
-print(json.dumps(result,indent=2))
+print(json.dumps(result,indent=2,ensure_ascii=False))
 print(type(after_normalize))
 print(type(research_input_pipeline))
