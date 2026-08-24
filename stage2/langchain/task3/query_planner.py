@@ -1,5 +1,4 @@
 import os
-from sklearn import pipeline
 from dotenv import load_dotenv
 from stage2.langchain.task3.prompt_basics import build_research_prompt
 from pydantic import BaseModel, Field
@@ -37,13 +36,15 @@ def validate_query_plan(
         raise ValueError(f"查询计划中的 search_queries 数量超过了最大限制 {max_queries}。")
     if not plan.normalized_query.strip():
         raise ValueError("规范化后的查询不能为空。")
+    if any(not query.strip() for query in plan.search_queries):
+        raise ValueError("search_queries 中的查询不能为空。")
     unique_queries = set(query.strip().lower() for query in plan.search_queries)
     if len(unique_queries) != len(plan.search_queries):
         raise ValueError("搜索查询列表中存在重复的查询。")
     return plan
 if __name__ == "__main__":
     llm=build_llm()
-    structured_llm=llm.with_structured_output(QueryPlan,method="function_calling")
+    structured_llm=llm.with_structured_output(QueryPlan,method="json_schema")
     prompt=build_research_prompt()
     pipeline=prompt | structured_llm
     payload = {
@@ -51,10 +52,14 @@ if __name__ == "__main__":
     "max_queries": 3,
 }
     plan = pipeline.invoke(payload)
-
-validated_plan = validate_query_plan(
+    print("=====================================")
+    print(type(plan))
+    print(plan.model_dump_json(indent=2,exclude_none=True))
+    validated_plan = validate_query_plan(
     plan,
     payload["max_queries"],
 )
-
-
+    print("=====================================")
+    print(type(validated_plan))
+    print(validated_plan.model_dump_json(indent=2,exclude_none=True))
+    print(id(plan)==id(validated_plan))
