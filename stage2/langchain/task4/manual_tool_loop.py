@@ -43,5 +43,6 @@ if __name__ == "__main__":
                 else:
                     messages.append(ToolMessage(name=tool_name,content=f"未知的工具: {tool_name}",tool_call_id=tool_call["id"]))
     # 返回最后一个AIMessage的内容作为最终结果
-    print("超过最大步骤数，返回最后一个AIMessage的内容作为最终结果。")
-    print(messages[-1].content)
+    else:
+        print("超过最大步骤数，返回最后一个AIMessage的内容作为最终结果。")
+        print(messages[-1].content)
