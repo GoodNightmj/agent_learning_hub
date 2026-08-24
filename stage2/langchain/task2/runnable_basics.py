@@ -92,6 +92,15 @@ result = research_input_pipeline.invoke(
     }
 )
 
-print(json.dumps(result,indent=2,ensure_ascii=False))
-print(type(after_normalize))
-print(type(research_input_pipeline))
+enrich_pipeline = normalize | RunnablePassthrough.assign(
+    query_stats=analyze
+)
+
+enriched_result = enrich_pipeline.invoke(
+    {
+        "query": "  LangChain RunnableParallel 是什么？  ",
+        "max_results": 3,
+    }
+)
+
+print(json.dumps(enriched_result, indent=2, ensure_ascii=False))
