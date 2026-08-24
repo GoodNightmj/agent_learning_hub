@@ -22,7 +22,8 @@ def build_llm():
     llm=ChatOpenAI(
         api_key=api_key,
         base_url=base_url,
-        model=model
+        model=model,
+        use_responses_api=True,
     )
     return llm
 def validate_query_plan(
