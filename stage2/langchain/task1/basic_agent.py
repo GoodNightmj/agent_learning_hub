@@ -12,6 +12,7 @@ llm=ChatOpenAI(
     model=model, 
     api_key=apikey,
     base_url=url,
+    use_responses_api=True
 )
 
 
