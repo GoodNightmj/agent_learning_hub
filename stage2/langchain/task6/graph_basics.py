@@ -25,7 +25,7 @@ def format_node(state: LearningState) -> dict:
     # 1. 读取 state["normalized_text"]
     # 2. 生成“处理结果：xxx”
     # 3. 返回 {"final_text": ...}
-    normalized_text = state["raw_text"].strip().lower()
+    normalized_text = state["normalized_text"].strip().lower()
     final_text = f"处理结果：{normalized_text}"
     return {"final_text": final_text}
 

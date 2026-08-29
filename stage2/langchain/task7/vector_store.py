@@ -3,8 +3,6 @@ from pathlib import Path
 import chromadb
 
 from stage2.task1.chunker import chunk_text
-from stage2.task1.embedder import load_embedding_model
-
 
 DB_PATH = Path(__file__).parent / "chroma_db"
 COLLECTION_NAME = "research_knowledge"
@@ -180,45 +178,3 @@ def print_results(title: str, results: dict) -> None:
         print(f"Distance: {distance:.4f}")
         print(f"Metadata: {metadata}")
         print(f"Document: {document}")
-
-
-def main() -> None:
-    embedding_model = load_embedding_model()
-    collection = get_collection()
-
-    indexed_count = build_index(
-        collection=collection,
-        embedding_model=embedding_model,
-    )
-
-    print(f"本次写入记录数：{indexed_count}")
-    print(f"数据库当前记录总数：{collection.count()}")
-
-    all_results = search(
-        collection=collection,
-        embedding_model=embedding_model,
-        query="什么时候应该使用 LangGraph StateGraph？",
-        top_k=3,
-    )
-
-    print_results(
-        title="不使用 Metadata Filter",
-        results=all_results,
-    )
-
-    official_results = search(
-        collection=collection,
-        embedding_model=embedding_model,
-        query="什么时候应该使用 LangGraph StateGraph？",
-        top_k=3,
-        source_type="official_docs",
-    )
-
-    print_results(
-        title="只允许 official_docs",
-        results=official_results,
-    )
-
-
-if __name__ == "__main__":
-    main()
