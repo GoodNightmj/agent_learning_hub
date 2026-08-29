@@ -10,3 +10,4 @@ wheels/
 .venv
 .env
 .DS_Store
+stage2/langchain/task7/chroma_db/
