@@ -26,9 +26,9 @@ def inspect_structured_output() -> QueryPlan:
     result = pipeline.invoke(PAYLOAD)
 
     # TODO 1：从 result 中取出 raw、parsed、parsing_error。
-    raw = ...
-    parsed = ...
-    parsing_error = ...
+    raw = result["raw"]
+    parsed = result["parsed"]
+    parsing_error = result["parsing_error"]
 
     print("\n=== 模型结构化输出 ===")
     print("raw 类型：", type(raw).__name__)
@@ -39,7 +39,11 @@ def inspect_structured_output() -> QueryPlan:
     # 1. parsing_error 不为 None 时抛出该异常。
     # 2. parsed 为 None 时抛出 RuntimeError。
     # 3. 使用 PAYLOAD["max_queries"] 执行业务校验。
-    validated_plan = ...
+    if parsing_error is not None:
+        raise parsing_error
+    if parsed is None:
+        raise RuntimeError("Parsed result is None")
+    validated_plan = validate_query_plan(parsed, max_queries=PAYLOAD["max_queries"])
 
     print(validated_plan.model_dump_json(indent=2))
     return validated_plan
@@ -50,7 +54,12 @@ def demonstrate_pydantic_validation() -> None:
     print("\n=== Pydantic Schema 校验失败 ===")
     try:
         # TODO 3：构造 QueryPlan，使 search_queries 违反 min_length=1。
-        invalid_plan = ...
+        invalid_plan = QueryPlan(
+            normalized_query="这是一个测试查询",
+            search_queries=[],  # 违反 min_length=1
+            requires_web=True,
+            planning_note="这是一个测试规划说明",
+        )
         print("不应执行到这里：", invalid_plan)
     except ValidationError as error:
         print(error)
@@ -63,7 +72,12 @@ def demonstrate_business_validation() -> None:
     # TODO 4：
     # 构造一个 Pydantic 可以接受的 QueryPlan，
     # 但让 search_queries 数量超过本次 max_queries=3。
-    business_invalid_plan = ...
+    business_invalid_plan = QueryPlan(
+        normalized_query="这是一个测试查询",
+        search_queries=["查询1", "查询2", "查询3", "查询4"],  # 超过 max_queries=3
+        requires_web=True,
+        planning_note="这是一个测试规划说明",
+    )
 
     try:
         validate_query_plan(
@@ -81,13 +95,13 @@ def demonstrate_semantic_boundary() -> None:
     # TODO 5：
     # 原问题设为“查询今天的 AI 新闻”，
     # 但 search_queries 填入一个完全无关的问题。
-    semantic_invalid_plan = ...
-
-    validated_plan = validate_query_plan(
-        semantic_invalid_plan,
-        max_queries=3,
+    semantic_invalid_plan = QueryPlan(
+        normalized_query="查询今天的 AI 新闻",
+        search_queries=["查询1", "查询2", "查询3"],  # 与原问题无关
+        requires_web=True,
+        planning_note="这是一个测试规划说明",
     )
-    print(validated_plan.model_dump_json(indent=2))
+    print(semantic_invalid_plan.model_dump_json(indent=2))
 
 
 def main() -> None:
