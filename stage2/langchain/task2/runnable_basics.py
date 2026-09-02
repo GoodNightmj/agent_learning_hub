@@ -1,3 +1,4 @@
+from dbm import error
 from typing import Any
 import json
 from langchain_core.runnables import (
@@ -76,31 +77,52 @@ normalize = RunnableLambda(normalize_query)
 defaults = RunnableLambda(apply_defaults)
 build_request = RunnableLambda(build_search_request)
 analyze = RunnableLambda(analyze_query)
-
 after_normalize = RunnableParallel(
     search_request=defaults | build_request,
     normalized_payload=RunnablePassthrough(),
     query_stats=analyze,
 )
-
 research_input_pipeline = normalize | after_normalize
-
-result = research_input_pipeline.invoke(
-    {
-        "query": "  LangChain RunnableParallel 是什么？  ",
-        "max_results": 3,
-    }
-)
 
 enrich_pipeline = normalize | RunnablePassthrough.assign(
     query_stats=analyze
 )
 
-enriched_result = enrich_pipeline.invoke(
+def main():
+    result = research_input_pipeline.invoke(
+        {
+            "query": "  LangChain RunnableParallel 是什么？  ",
+            "max_results": 3,
+        }
+    )
+    enriched_result = enrich_pipeline.invoke(
+        {
+            "query": "  LangChain RunnableParallel 是什么？  ",
+            "max_results": 3,
+        }
+    )
+    print(json.dumps(enriched_result, indent=2, ensure_ascii=False))
+    batch_inputs = [
     {
-        "query": "  LangChain RunnableParallel 是什么？  ",
-        "max_results": 3,
-    }
-)
-
-print(json.dumps(enriched_result, indent=2, ensure_ascii=False))
+        "query": "  LangChain 是什么？  ",
+    },
+    {
+        "query": "  RunnableParallel 如何工作？  ",
+        "max_results": 2,
+    },
+    {
+        "query": "  Agent 如何调用工具？  ",
+        "require_citations": False,
+    },
+]
+    batch_results = research_input_pipeline.batch(batch_inputs)
+    print(json.dumps(batch_results, indent=2, ensure_ascii=False))
+    broken_pipeline = normalize | build_request | analyze
+    try:
+        broken_pipeline.invoke({
+            "query": "测试输入",
+        })
+    except KeyError as error:
+        print("捕获到 Pipeline 结构错误：", error)
+if __name__== "__main__":
+    main()
