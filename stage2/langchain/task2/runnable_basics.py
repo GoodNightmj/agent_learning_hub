@@ -1,4 +1,3 @@
-from dbm import error
 from typing import Any
 import json
 from langchain_core.runnables import (
@@ -39,6 +38,7 @@ def apply_defaults(payload: dict[str, Any]) -> dict[str, Any]:
     new_payload.setdefault("require_citations", True)
     return new_payload
 
+
 def build_search_request(payload: dict[str, Any]) -> dict[str, Any]:
     """
     输出格式：
@@ -52,8 +52,10 @@ def build_search_request(payload: dict[str, Any]) -> dict[str, Any]:
     new_payload = payload.copy()
     new_payload["search_query"] = new_payload.pop("query")
     new_payload["limit"] = new_payload.pop("max_results")
-    new_payload["citation_eligible_only"] = new_payload.pop("require_citations")
+    new_payload["citation_eligible_only"] = new_payload.pop(
+        "require_citations")
     return new_payload
+
 
 def analyze_query(payload: dict[str, Any]) -> dict[str, Any]:
     """
@@ -73,6 +75,8 @@ def analyze_query(payload: dict[str, Any]) -> dict[str, Any]:
         "query_length": len(query),
         "has_custom_limit": "max_results" in payload,
     }
+
+
 normalize = RunnableLambda(normalize_query)
 defaults = RunnableLambda(apply_defaults)
 build_request = RunnableLambda(build_search_request)
@@ -88,13 +92,8 @@ enrich_pipeline = normalize | RunnablePassthrough.assign(
     query_stats=analyze
 )
 
-def main():
-    result = research_input_pipeline.invoke(
-        {
-            "query": "  LangChain RunnableParallel 是什么？  ",
-            "max_results": 3,
-        }
-    )
+
+def main() -> None:
     enriched_result = enrich_pipeline.invoke(
         {
             "query": "  LangChain RunnableParallel 是什么？  ",
@@ -103,26 +102,33 @@ def main():
     )
     print(json.dumps(enriched_result, indent=2, ensure_ascii=False))
     batch_inputs = [
-    {
-        "query": "  LangChain 是什么？  ",
-    },
-    {
-        "query": "  RunnableParallel 如何工作？  ",
-        "max_results": 2,
-    },
-    {
-        "query": "  Agent 如何调用工具？  ",
-        "require_citations": False,
-    },
-]
+        {
+            "query": "  LangChain 是什么？  ",
+        },
+        {
+            "query": "  RunnableParallel 如何工作？  ",
+            "max_results": 2,
+        },
+        {
+            "query": "  Agent 如何调用工具？  ",
+            "require_citations": False,
+        },
+    ]
     batch_results = research_input_pipeline.batch(batch_inputs)
     print(json.dumps(batch_results, indent=2, ensure_ascii=False))
-    broken_pipeline = normalize | build_request | analyze
+    broken_pipeline = (
+        normalize
+        | defaults
+        | build_request
+        | analyze
+    )
     try:
         broken_pipeline.invoke({
             "query": "测试输入",
         })
     except KeyError as error:
         print("捕获到 Pipeline 结构错误：", error)
-if __name__== "__main__":
+
+
+if __name__ == "__main__":
     main()

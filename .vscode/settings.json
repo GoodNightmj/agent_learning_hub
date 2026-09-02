@@ -3,5 +3,8 @@
     "editor.defaultFormatter": "ms-python.autopep8",
     "editor.formatOnSave": true
   },
+  "autopep8.interpreter": [
+    "D:\\develop\\project\\agent_learning_hub\\.venv\\Scripts\\python.exe"
+  ],
   "autopep8.importStrategy": "fromEnvironment"
 }
