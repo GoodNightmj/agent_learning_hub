@@ -7,7 +7,7 @@
 import json
 
 from langchain.agents import create_agent
-from langchain.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain.tools import tool
 
 from stage2.langchain.task3.query_planner import build_llm
@@ -55,11 +55,25 @@ def build_tool_messages(ai_message: AIMessage) -> list[ToolMessage]:
     # 4. 已知工具使用 tool.invoke(tool_call["args"]) 执行。
     # 5. 工具结果只 json.dumps 一次，再构造对应 ToolMessage。
     # 6. 将每条 ToolMessage 加入 tool_messages。
-    raise NotImplementedError("请完成 TODO 1")
-
+    for tool_call in ai_message.tool_calls:
+        tool_name = tool_call["name"]
+        tool_id = tool_call["id"]
+        if tool_name in TOOLS_BY_NAME:
+            tool=TOOLS_BY_NAME[tool_name]
+            result=tool.invoke(tool_call["args"])
+            tool_message=ToolMessage(
+                name=tool_name,
+                tool_call_id=tool_id,
+                content=json.dumps(result, ensure_ascii=False),
+            )
+        else:
+            tool_message=ToolMessage(
+                name=tool_name,
+                tool_call_id=tool_id,
+                content=json.dumps({"error": f"Unknown tool: {tool_name}"}, ensure_ascii=False),
+            )
+        tool_messages.append(tool_message)
     return tool_messages
-
-
 def assert_tool_call_pairs(messages: list[BaseMessage]) -> None:
     """验证每个 Tool Call 都有且只有一个相同 ID 的 ToolMessage。"""
 
@@ -67,7 +81,12 @@ def assert_tool_call_pairs(messages: list[BaseMessage]) -> None:
     # requested_ids：收集所有 AIMessage.tool_calls 中的 id。
     # returned_ids：收集所有 ToolMessage.tool_call_id。
     # 如果两个集合不相等，抛出带有 missing / unexpected 信息的 AssertionError。
-    raise NotImplementedError("请完成 TODO 2")
+    requested_ids = [tool_call["id"] for message in messages if isinstance(message, AIMessage) for tool_call in message.tool_calls]
+    returned_ids = [message.tool_call_id for message in messages if isinstance(message, ToolMessage)]
+    if set(requested_ids) != set(returned_ids):
+        missing = set(requested_ids) - set(returned_ids)
+        unexpected = set(returned_ids) - set(requested_ids)
+        raise AssertionError(f"Tool Call ID mismatch. Missing: {missing}, Unexpected: {unexpected}")
 
 
 def print_trace(title: str, messages: list[BaseMessage]) -> None:
