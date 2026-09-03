@@ -51,8 +51,19 @@ def snapshot_summary(agent: Any, config: dict) -> dict[str, object]:
     # 5. 使用 len(list(agent.get_state_history(config))) 统计历史快照数量。
     # 6. 返回下面这些键：
     #    thread_id、checkpoint_id、message_count、next_nodes、history_count。
-    raise NotImplementedError("请完成 TODO 1")
-
+    snapshot = agent.get_state(config)
+    messages = snapshot.values.get("messages")
+    thread_id = snapshot.config["configurable"]["thread_id"]
+    checkpoint_id = snapshot.config["configurable"]["checkpoint_id"]
+    next_nodes = snapshot.next
+    history_count = len(list(agent.get_state_history(config)))
+    return {
+        "thread_id": thread_id,
+        "checkpoint_id": checkpoint_id,
+        "message_count": len(messages),
+        "next_nodes": next_nodes,
+        "history_count": history_count,
+    }
 
 def assert_get_state_is_read_only(agent: Any, config: dict) -> None:
     """证明连续读取 State 不会产生新消息或新 Checkpoint。"""
@@ -62,7 +73,12 @@ def assert_get_state_is_read_only(agent: Any, config: dict) -> None:
     # TODO 2（核心）：
     # 检查两次读取的 checkpoint_id、message_count、history_count 均相同。
     # 任意一项变化，都抛出带有 before / after 的 AssertionError。
-    raise NotImplementedError("请完成 TODO 2")
+    try:
+        assert before["checkpoint_id"] == after["checkpoint_id"]
+        assert before["message_count"] == after["message_count"]
+        assert before["history_count"] == after["history_count"]
+    except AssertionError:
+        raise AssertionError(f"State changed after get_state: before={before}, after={after}")
 
 
 def print_summary(title: str, summary: dict[str, object]) -> None:
@@ -124,7 +140,11 @@ def run_memory_scope_experiment() -> None:
     # 2. 相同 Checkpointer + 不同 thread_id 时，只包含当前一轮的 2 条消息。
     # 3. 全新 Checkpointer + 相同 thread_id 时，也只包含当前一轮的 2 条消息。
     # 4. Thread A 第二轮后的 history_count 大于第一轮。
-    raise NotImplementedError("请完成 TODO 3")
+    assert shared_after_second_turn["message_count"] == shared_after_first_turn["message_count"] + 2
+    assert different_thread["message_count"] == 2
+    assert fresh_checkpointer["message_count"] == 2
+    assert shared_after_second_turn["history_count"] > shared_after_first_turn["history_count"]
+
 
     # 在已有写入完成后证明 get_state 只是读取。
     assert_get_state_is_read_only(reader_agent, thread_a_config)

@@ -101,7 +101,11 @@ def demonstrate_semantic_boundary() -> None:
         requires_web=True,
         planning_note="这是一个测试规划说明",
     )
-    print(semantic_invalid_plan.model_dump_json(indent=2))
+    validated_plan = validate_query_plan(
+        semantic_invalid_plan,
+        max_queries=3,
+    )
+    print(validated_plan.model_dump_json(indent=2))
 
 
 def main() -> None:
