@@ -30,7 +30,8 @@ class ResearchState(TypedDict, total=False):
     # 当前写法会让每个 Node 返回的新列表覆盖旧列表。
     # 请把它改成使用 operator.add 的 Annotated 字段，
     # 使各 Node 返回的 ["search"]、["fetch"] 等能够依次累积。
-    stage_log: list[str]
+    
+    stage_log: Annotated[list[str], operator.add]
 
 
 @tool
@@ -142,7 +143,10 @@ def route_after_search(
     # TODO 2（条件路由）：
     # 同时检查 search_result["success"] 和 selected_url。
     # 满足条件返回 "fetch"，否则返回 "fail"。
-    raise NotImplementedError("完成 TODO 2：实现搜索后的条件路由")
+    if state["search_result"].get("success") and state.get("selected_url"):
+        return "fetch"
+    else:
+        return "fail"
 
 
 def fetch_node(state: ResearchState) -> dict:
@@ -168,7 +172,10 @@ def route_after_fetch(
     # TODO 3（条件路由）：
     # 检查 page_result["success"]。
     # 成功返回 "answer"，否则返回 "fail"。
-    raise NotImplementedError("完成 TODO 3：实现读取后的条件路由")
+    if state["page_result"].get("success"):
+        return "answer"
+    else:
+        return "fail"
 
 
 def answer_node(state: ResearchState) -> dict:
@@ -210,7 +217,24 @@ def build_graph():
     #
     # 注意："fetch"、"answer"、"fail" 是 Router 返回的路线标签；
     # add_conditional_edges 的映射字典负责把标签映射到真正 Node 名。
-
+    builder.add_edge(START, "search")
+    builder.add_conditional_edges(
+        "search",
+        route_after_search,
+        {
+            "fetch": "fetch",
+            "fail": "failure",
+        },
+    )
+    builder.add_conditional_edges(
+        "fetch",
+        route_after_fetch,
+        {
+            "answer": "answer",
+            "fail": "failure",
+        },
+    )
+    builder.add_edge("answer", END)
     return builder.compile()
 
 
@@ -241,7 +265,10 @@ def assert_expected_paths(
     #
     # 再写一条断言：success["answer"] 中包含
     # "memory://langgraph-overview"。
-    raise NotImplementedError("完成 TODO 5：为三条执行路径编写断言")
+    assert success["stage_log"] == ["search", "fetch", "answer"]    
+    assert search_failure["stage_log"] == ["search", "failure"]
+    assert fetch_failure["stage_log"] == ["search", "fetch", "failure"]
+    assert "memory://langgraph-overview" in success["answer"]
 
 
 def main() -> None:
