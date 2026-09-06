@@ -13,7 +13,7 @@ from typing import Annotated, Literal
 
 from langchain.messages import AIMessage, ToolMessage
 from langchain.tools import tool
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
 from typing_extensions import TypedDict
 
@@ -104,8 +104,16 @@ def demonstrate_tool_node_contract() -> None:
         ],
     )
 
-    update = tool_node.invoke({"messages": [model_request]})
-    tool_message = update["messages"][0]
+    # 通过 Graph 执行，让 LangGraph 为 ToolNode 提供运行上下文。
+    demo_builder = StateGraph(MessagesState)
+    demo_builder.add_node("tools", tool_node)
+    demo_builder.add_edge(START, "tools")
+    demo_builder.add_edge("tools", END)
+    demo_graph = demo_builder.compile()
+
+    result = demo_graph.invoke({"messages": [model_request]})
+    # 完整 State 同时包含原始 AIMessage 和工具结果。
+    tool_message = result["messages"][-1]
 
     assert isinstance(tool_message, ToolMessage)
     assert tool_message.name == "search_catalog"
@@ -235,6 +243,7 @@ def build_graph():
         },
     )
     builder.add_edge("answer", END)
+    builder.add_edge("failure", END)
     return builder.compile()
 
 
