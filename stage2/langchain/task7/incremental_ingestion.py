@@ -54,15 +54,23 @@ def plan_sync(old_by_id: dict, new_records: list[dict]) -> dict:
 
         # TODO 1：old 为 None 时，将 ID 加入 encode，然后 continue。
         # 使用普通 Python 的 if / is None / list.append / continue。
-        raise NotImplementedError("TODO 1：识别新增记录")
-
+        if old is None:
+            plan["encode"].append(record_id)
+            continue
         # TODO 2：已有记录依次比较 document、metadata。
         # 正文不同 -> encode；仅 metadata 不同 -> metadata；否则 -> skip。
         # 每条记录必须且只能加入这三个列表之一，不修改 item / old。
-
+        if item["document"] != old["document"]:
+            plan["encode"].append(record_id)
+        elif item["metadata"] != old["metadata"]:
+            plan["metadata"].append(record_id)
+        else:
+            plan["skip"].append(record_id)
     # TODO 3：遍历 old_by_id，把不在 new_ids 中的 ID 加入 delete。
     # 空 new_records 表示该来源最新快照为空，需要删除该来源全部旧块。
-
+    for record_id in old_by_id:
+        if record_id not in new_ids:
+            plan["delete"].append(record_id)
     return plan
 
 
