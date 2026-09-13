@@ -5,20 +5,21 @@
 from time import perf_counter
 
 # 练习：补上 CrossEncoder 的导入。
+from sentence_transformers import CrossEncoder
 from stage2.langchain.task7.hybrid_retrieval import QUESTIONS, TEXT_BY_ID, rrf
 
 MODEL_NAME = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
 RECALL_SNAPSHOTS = [
     (["resume:0", "session-error:0", "rerank:0"], ["resume:0"]),
     (["session-error:0", "tool-error:0", "resume:0"], ["session-error:0"]),
-    (["budget:0", "tool-error:0", "rerank:0"], ["tools:0", "tool-error:0", "budget:0"]),
+    (["tool-error:0", "rerank:0"], ["tools:0", "tool-error:0"]),
 ]
 
 
 def load_reranker():
     """返回可调用 predict 的精排模型对象；由 main 在问题循环外调用一次。"""
     # 功能 1：使用 MODEL_NAME 创建模型并返回；此处不执行候选评分。
-    raise NotImplementedError("请实现模型加载")
+    return CrossEncoder(MODEL_NAME)
 
 
 def rerank(model, question: str, candidate_ids: list[str], top_k: int = 2):
@@ -27,7 +28,13 @@ def rerank(model, question: str, candidate_ids: list[str], top_k: int = 2):
     """
     # 功能 2：从 ID 找正文，构造问题/正文对，predict 评分，对齐 ID，再排序截取。
     # predict 使用 convert_to_numpy=True。在本函数中连接完整流程，不加载模型。
-    raise NotImplementedError("请实现完整精排")
+    scores = []
+    if not candidate_ids:
+        return []
+    pairs = [(question, TEXT_BY_ID[record_id]) for record_id in candidate_ids]
+    scores = model.predict(pairs, convert_to_numpy=True)
+    ranked = sorted(zip(candidate_ids, scores), key=lambda x: (-x[1], x[0]))
+    return ranked[:top_k]
 
 
 def check_core() -> None:
