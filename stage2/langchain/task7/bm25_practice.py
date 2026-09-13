@@ -4,12 +4,14 @@
 """
 # 练习：在这里补上 BM25Okapi 的导入。
 from stage2.langchain.task7.hybrid_retrieval import DATA, tokenize
-
+from rank_bm25 import BM25Okapi
 
 def build_index(records: list[tuple[str, str]]):
     """输入非空 (ID, 正文) 列表，返回 (BM25 对象, 与 records 同序的分词列表)。"""
     # 功能 1：准备每篇文档的词列表，创建 BM25 对象，返回上述两个值。
-    raise NotImplementedError("请实现建索引")
+    tokenized_corpus = [tokenize(text) for _, text in records]
+    bm25 = BM25Okapi(tokenized_corpus)
+    return bm25, tokenized_corpus
 
 
 def search(bm25, records, tokenized_corpus, question: str, top_k: int = 2):
@@ -19,8 +21,10 @@ def search(bm25, records, tokenized_corpus, question: str, top_k: int = 2):
     """
     # 功能 2：问题分词、调用评分、排除无词项交集的文档、对齐结果、排序截取。
     # 这是完整查询功能，自己组织中间变量和循环；不要重新创建 BM25 对象。
-    raise NotImplementedError("请实现查询")
-
+    scores = bm25.get_scores(tokenize(question))
+    hits = [(records[i][0], records[i][1], scores[i]) for i in range(len(records)) if set(tokenized_corpus[i]) & set(tokenize(question))]
+    sorted_hits = sorted(hits, key=lambda x: x[2], reverse=True)
+    return sorted_hits[:top_k]
 
 def main() -> None:
     records = list(DATA)
