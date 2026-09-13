@@ -48,17 +48,17 @@ def main() -> None:
 
     # TODO 1：调用 add_documents，写入 DOCUMENTS，显式传入 IDS。
     # 将返回的 ID 列表赋给 written_ids；替换下一行。
-    written_ids = None
+    written_ids = vector_store.add_documents(documents=DOCUMENTS, ids=IDS)
     assert written_ids == IDS, "TODO 1：应写入四条记录并返回对应 ID"
     print(f"写入 {len(written_ids)} 个 chunk")
 
-    question = "程序关掉后，怎样保留之前的聊天？"
+    question = "模型提出工具调用后，是谁真正执行工具？"
     all_results = vector_store.similarity_search(question, k=2)
     show("不限制来源类型", all_results)
 
     # TODO 2：仍然检索 question，k=2，但只允许 source_type 为 handbook。
     # 使用 similarity_search 的 filter 参数；返回值赋给 filtered_results。
-    filtered_results = None
+    filtered_results = vector_store.similarity_search(question,k=2,filter={"source_type": "handbook"})
     assert isinstance(filtered_results, list), "TODO 2：应返回 Document 列表"
     assert len(filtered_results) == 2, "本例有两条 handbook 记录，应取回两条"
     assert all(doc.metadata["source_type"] == "handbook" for doc in filtered_results)
