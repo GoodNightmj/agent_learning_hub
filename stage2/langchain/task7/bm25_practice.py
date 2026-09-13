@@ -21,9 +21,11 @@ def search(bm25, records, tokenized_corpus, question: str, top_k: int = 2):
     """
     # 功能 2：问题分词、调用评分、排除无词项交集的文档、对齐结果、排序截取。
     # 这是完整查询功能，自己组织中间变量和循环；不要重新创建 BM25 对象。
-    scores = bm25.get_scores(tokenize(question))
-    hits = [(records[i][0], records[i][1], scores[i]) for i in range(len(records)) if set(tokenized_corpus[i]) & set(tokenize(question))]
-    sorted_hits = sorted(hits, key=lambda x: x[2], reverse=True)
+    token_query = tokenize(question)
+    set_query = set(token_query)
+    scores = bm25.get_scores(token_query)
+    hits = [(records[i][0], records[i][1], float(scores[i])) for i in range(len(records)) if set(tokenized_corpus[i]) & set_query]
+    sorted_hits = sorted(hits, key=lambda x: (-x[2], x[0]))
     return sorted_hits[:top_k]
 
 def main() -> None:
@@ -31,7 +33,8 @@ def main() -> None:
     bm25, tokenized_corpus = build_index(records)
     assert len(tokenized_corpus) == len(records)
     assert all(isinstance(tokens, list) for tokens in tokenized_corpus)
-    questions = ["ERR_TOOL_TIMEOUT", "max_steps", "量子纠缠", "ERR_TOOL_TIMEOUT ERR_SESSION_NOT_FOUND"]
+    questions = ["ERR_TOOL_TIMEOUT", "max_steps", "量子纠缠",
+                 "ERR_TOOL_TIMEOUT ERR_SESSION_NOT_FOUND", "ERR_INDEX_MISSING"]
     results = []
     for question in questions:
         hits = search(bm25, records, tokenized_corpus, question, top_k=2)
@@ -46,6 +49,7 @@ def main() -> None:
     assert results[2] == [], "完全无匹配时不能硬凑 Top-K"
     assert {hit[0] for hit in results[3]} == {"tool-error:0", "session-error:0"}
     assert len(search(bm25, records, tokenized_corpus, questions[3], top_k=1)) == 1
+    assert results[-1][0][0] == "error:0", "同分时按 ID 排序，方便复现实验"
     print("\nPASS 精确词项检索、ID/正文对齐、降序、Top-K 与空结果")
     print("独立修改：新增唯一错误码文档，重新建索引并查询；不要只改 records 后沿用旧对象。")
 

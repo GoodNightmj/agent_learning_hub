@@ -22,6 +22,7 @@ DATA = [
     ("rerank:0", "精排模型重新判断问题与候选资料的相关程度，调整顺序；无法找回没有进入候选集合的文档。"),
     ("hybrid:0", "混合检索融合向量召回与关键词召回。RRF 使用各路结果的排名计算融合分数。"),
     ("cache:0", "缓存复用：文档正文和编码配置未变化时可复用旧向量；仅修改来源标签通常不需要重新编码。"),
+    ("error:0", "ERR_INDEX_MISSING 表示本项目未找到指定索引。检查索引名称是否正确，以及索引是否已创建。"),
 ]
 IDS = [record_id for record_id, _ in DATA]
 DOCS = [Document(page_content=text, metadata={"chunk_id": record_id}) for record_id, text in DATA]
