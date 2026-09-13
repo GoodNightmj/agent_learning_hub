@@ -15,7 +15,7 @@ from stage2.langchain.task7.langchain_retrieval_basics import DOCUMENTS, IDS, sh
 # 根据本文件定位，避免当前工作目录变化导致打开另一份数据库。
 # 该目录位于仓库已有的 chroma_db/ 忽略规则下。
 DB_PATH = Path(__file__).resolve().parent / "chroma_db" / "persistent_lab"
-COLLECTION_NAME = "task7_persistent_v1"
+COLLECTION_NAME = "task7_persistent_v12"
 
 
 class CountedEmbeddings(Embeddings):
@@ -43,8 +43,8 @@ def open_store(embeddings, create: bool) -> Chroma:
     # persist_directory 使用 str(DB_PATH)。
     # 其他参数已写好：build 允许创建，query 只打开已有 Collection。
     return Chroma(
-        collection_name=None,
-        persist_directory=None,
+        collection_name=COLLECTION_NAME,
+        persist_directory=str(DB_PATH),
         embedding_function=embeddings,
         create_collection_if_not_exists=create,
         collection_configuration={"hnsw": {"space": "cosine"}},
@@ -79,7 +79,7 @@ def main() -> None:
         )
         question = "模型提出工具调用后，是谁真正执行工具？"
         # TODO 2：调用 retriever.invoke(question)，返回 Document 列表。
-        docs = None
+        docs = retriever.invoke(question)
         assert isinstance(docs, list) and docs, "TODO 2：请完成查询"
         show("持久化检索结果", docs)
         assert all(doc.metadata["source_type"] == "handbook" for doc in docs)
