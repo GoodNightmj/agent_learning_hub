@@ -37,7 +37,9 @@ def tokenize(text: str) -> list[str]:
 
 def bm25_scores(bm25, question: str):
     # TODO 1：先 tokenize(question)，再调用 bm25.get_scores，返回各文档分数。
-    raise NotImplementedError("TODO 1：BM25 查询")
+    query_tokens = tokenize(question)
+    print(f"BM25 查询分词：{query_tokens}")
+    return bm25.get_scores(query_tokens)
 
 
 def rrf(rankings: list[list[str]], c: int = 60) -> list[str]:
@@ -46,8 +48,8 @@ def rrf(rankings: list[list[str]], c: int = 60) -> list[str]:
         for rank, record_id in enumerate(ranking, start=1):
             # TODO 2：累加 scores[record_id]，本路贡献为 1 / (c + rank)。
             # 首次遇到此 ID 时旧分数按 0 处理，可使用字典 get。
-            raise NotImplementedError("TODO 2：按 ID 累加 RRF 分数")
-    # 相同 ID 最终只出现一次；同分时按 ID 排序，方便复现实验。
+            # 相同 ID 最终只出现一次；同分时按 ID 排序，方便复现实验。
+            scores[record_id] = scores.get(record_id, 0) + 1 / (c + rank)
     return sorted(scores, key=lambda record_id: (-scores[record_id], record_id))
 
 

@@ -15,7 +15,7 @@ from stage2.langchain.task7.langchain_retrieval_basics import DOCUMENTS, IDS, sh
 # 根据本文件定位，避免当前工作目录变化导致打开另一份数据库。
 # 该目录位于仓库已有的 chroma_db/ 忽略规则下。
 DB_PATH = Path(__file__).resolve().parent / "chroma_db" / "persistent_lab"
-COLLECTION_NAME = "task7_persistent_v12"
+COLLECTION_NAME = "task7_persistent_v1"
 
 
 class CountedEmbeddings(Embeddings):
