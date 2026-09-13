@@ -10,10 +10,12 @@ from stage2.langchain.task7.hybrid_retrieval import DATA, DOCS, IDS, TEXT_BY_ID,
 from stage2.langchain.task7.bm25_practice import build_index, search
 from stage2.langchain.task7.rerank_basics import load_reranker, rerank
 from stage2.langchain.task7.persistent_retrieval import CountedEmbeddings
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
 
 EMBEDDING_MODEL = "Qwen/Qwen3-Embedding-0.6B"
 COLLECTION_CONFIG = {"hnsw": {"space": "cosine"}}
-CANDIDATE_K = 3
+CANDIDATE_K = 5
 FINAL_K = 2
 # 教学标注：2=直接支持问题，1=有用补充，未列出=0。
 # 标注不能传入检索/精排；先看正文审查，不能为迎合排名而修改。
@@ -36,10 +38,16 @@ def prepare_resources():
     # 创建唯一名称的内存 Chroma，使用 COLLECTION_CONFIG，并写入 DOCS / IDS。
     # 调用自己写过的 build_index(DATA) 和 load_reranker()；返回上面五个对象。
     # 所有初始化只做一次，不放入问题循环。不要复制旧 main()。
-    raise NotImplementedError("请创建并连接检索资源")
+    counted_embeddings=CountedEmbeddings(HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL, encode_kwargs={"normalize_embeddings": True}))
+    store=Chroma(embedding_function=counted_embeddings,collection_name=f'task7final{uuid4().hex}',collection_configuration=COLLECTION_CONFIG)
+    store.add_documents(documents=DOCS, ids=IDS)
+    reranker=load_reranker()
+    bm25, tokenized_corpus=build_index(DATA)
+    return (store, bm25, tokenized_corpus, reranker, counted_embeddings)
 
 
-def retrieve_all(store, bm25, tokenized_corpus, reranker, question, candidate_k, final_k):
+
+def retrieve_all(store: Chroma, bm25, tokenized_corpus, reranker, question, candidate_k, final_k):
     """返回字典；五个值都是按名次排列且无重复的 ID 列表：
     dense / bm25 / hybrid / reranked 为最终 Top-K；candidates 为完整 RRF 候选。
     """
@@ -48,8 +56,20 @@ def retrieve_all(store, bm25, tokenized_corpus, reranker, question, candidate_k,
     # 两路完整召回排名交给 rrf；将完整融合候选交给 rerank，再提取 ID。
     # 最后截取各方案 final_k。不要先截成 final_k 再融合或精排。
     # 本函数内不创建模型、不写文档、不读取 CASES 或相关性标注。
-    raise NotImplementedError("请连接四种方案")
-
+    dense_results = store.similarity_search(question,candidate_k)
+    dense_ids = [doc.metadata["chunk_id"] for doc in dense_results]
+    bm25_results = search(bm25, DATA, tokenized_corpus, question, top_k=candidate_k)
+    bm25_ids = [item[0] for item in bm25_results]
+    candidates = rrf([dense_ids, bm25_ids])
+    reranked_results = rerank(reranker, question, candidates, top_k=final_k)
+    reranked_ids = [record_id for record_id, _ in reranked_results]
+    return {
+        "dense": dense_ids[:final_k],
+        "bm25": bm25_ids[:final_k],
+        "hybrid": candidates[:final_k],
+        "reranked": reranked_ids[:final_k],
+        "candidates": candidates
+    }
 
 def main() -> None:
     assert 0 < FINAL_K <= CANDIDATE_K
