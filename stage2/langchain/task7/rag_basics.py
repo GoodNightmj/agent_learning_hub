@@ -28,7 +28,7 @@ def format_documents(docs: list[Document]) -> str:
         label = f"{source}:chunk:{chunk_index}"
         # TODO 1：把一块资料整理为 "[标识]\n正文"，加入 blocks。
         # 使用已有 label 和 doc.page_content；保留实际换行，不要写成字面量 \\n。
-        raise NotImplementedError("TODO 1：保留正文与 chunk 标识")
+        blocks.append(f"[{label}]\n{doc.page_content}")
     return "\n\n".join(blocks)
 
 
@@ -69,9 +69,10 @@ def main() -> None:
         print(f"\n问题：{question}\n实际提供给模型的资料：\n{context}")
         # TODO 2：将 prompt 与 llm 用 | 连接，再 invoke。
         # 输入字典包含 question 和 context；返回 AIMessage，赋给 response。
-        response = None
+        pipline=prompt | llm
+        response = pipline.invoke({"question": question, "context": context})
         assert response is not None, "TODO 2：请完成回答调用"
-        print("\n模型输出：", response.content)
+        print("\n模型输出：", response.text)
         print("请人工核对：回答是否被正文支持，引用是否指向实际支持句子的 chunk。")
 
 
