@@ -1,9 +1,11 @@
 """Task7 综合收尾，第 1 轮：真实 Dense / BM25 / Hybrid / Hybrid+Rerank。
 运行：uv run --locked python -m stage2.langchain.task7.retrieval_capstone
-第 2 轮在此结果上加入 Hit Rate、Recall@K、MRR、nDCG；现在不提前布置指标 TODO。
+第 2 轮：先完成 retrieval_metrics.py 的四个指标，再运行本文件自动汇总。
 本轮用独立内存 Collection：每次运行建一次库，不验证跨进程持久化。
 """
+import argparse
 from uuid import uuid4
+from stage2.langchain.task7.retrieval_metrics import check_metrics, print_report
 
 # 学习任务：自行导入 Chroma、HuggingFaceEmbeddings。
 from stage2.langchain.task7.hybrid_retrieval import DATA, DOCS, IDS, TEXT_BY_ID, rrf
@@ -72,7 +74,16 @@ def retrieve_all(store: Chroma, bm25, tokenized_corpus, reranker, question, cand
     }
 
 def main() -> None:
-    assert 0 < FINAL_K <= CANDIDATE_K
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--candidate-k", type=int, default=CANDIDATE_K)
+    parser.add_argument("--final-k", type=int, default=FINAL_K)
+    parser.add_argument("--verbose", action="store_true", help="同时输出正文")
+    args = parser.parse_args()
+    candidate_k, final_k = args.candidate_k, args.final_k
+    assert 0 < final_k <= candidate_k
+    check_metrics()  # TODO 未完成时先报错，避免白白加载模型。
+    rows = []
+    print(f"实验配置：candidate_k={candidate_k}, final_k={final_k}")
     for _, _, labels in CASES:
         assert set(labels) <= set(IDS), "标注引用了不存在的文档"
     store, bm25, corpus, reranker, embeddings = prepare_resources()
@@ -82,23 +93,26 @@ def main() -> None:
     print(f"初始化完成：{len(DATA)} 篇资料；文档编码数={embeddings.document_count}")
     for case_id, question, labels in CASES:
         before_docs, before_queries = embeddings.document_count, embeddings.query_count
-        output = retrieve_all(store, bm25, corpus, reranker, question, CANDIDATE_K, FINAL_K)
+        output = retrieve_all(store, bm25, corpus, reranker, question, candidate_k, final_k)
         assert set(output) == {"dense", "bm25", "hybrid", "reranked", "candidates"}
         assert embeddings.document_count == before_docs, "查询不应重新编码语料"
         assert embeddings.query_count == before_queries + 1, "每题只执行一次 Dense 查询"
         for name, ranking in output.items():
             assert isinstance(ranking, list) and len(ranking) == len(set(ranking))
             assert set(ranking) <= set(IDS)
-            assert len(ranking) <= (2 * CANDIDATE_K if name == "candidates" else FINAL_K)
-        assert output["hybrid"] == output["candidates"][:FINAL_K]
+            assert len(ranking) <= (2 * candidate_k if name == "candidates" else final_k)
+        assert output["hybrid"] == output["candidates"][:final_k]
         assert set(output["reranked"]) <= set(output["candidates"]), "精排只能选择候选"
         print(f"\n{case_id}：{question}\n完整融合候选：{output['candidates']}")
         for name in ("dense", "bm25", "hybrid", "reranked"):
-            print(f"{name} Top-{FINAL_K}：{output[name]}")
-            for record_id in output[name]:
-                print(f"  [{record_id}] {TEXT_BY_ID[record_id]}")
+            rows.append((case_id, name, output[name], labels))
+            if args.verbose:
+                print(f"{name} Top-{final_k}：{output[name]}")
+                for record_id in output[name]:
+                    print(f"  [{record_id}] {TEXT_BY_ID[record_id]}")
         print("教学相关性标注（不参与检索）：", labels)
-    print("\nPASS 接口、ID、候选范围和编码次数；尚未完成检索质量评测。")
+    print("\nPASS 接口、ID、候选范围和编码次数。")
+    print_report(rows, final_k)
     print(f"累计文档编码={embeddings.document_count}；问题编码={embeddings.query_count}")
 
 
