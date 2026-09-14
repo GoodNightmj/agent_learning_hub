@@ -9,25 +9,40 @@ from statistics import mean
 
 def hit_at_k(ranking: list[str], labels: dict[str, int], k: int) -> float:
     """单题 Hit：前 k 条有任何相关资料返回 1.0，否则 0.0。"""
-    raise NotImplementedError("请实现 Hit@K")
+    for record_id in ranking[:k]:
+        if labels.get(record_id, 0) > 0:
+            return 1.0
+    return 0.0
 
 
 def recall_at_k(ranking: list[str], labels: dict[str, int], k: int) -> float:
     """前 k 条中相关资料的数量 / 全部标注相关资料的数量。"""
-    raise NotImplementedError("请实现 Recall@K")
+    relevant_count = sum(1 for grade in labels.values() if grade > 0)
+    if relevant_count == 0:
+        return 0.0
+    retrieved_relevant_count = sum(1 for record_id in ranking[:k] if labels.get(record_id, 0) > 0)
+    return retrieved_relevant_count / relevant_count
+    
 
 
 def rr_at_k(ranking: list[str], labels: dict[str, int], k: int) -> float:
     """首条相关资料的名次倒数；名次从 1 开始，前 k 条未命中返回 0.0。"""
-    raise NotImplementedError("请实现 RR@K；跨题均值才是 MRR@K")
-
+    for rank, record_id in enumerate(ranking[:k], start=1):
+        if labels.get(record_id, 0) > 0:
+            return 1.0 / rank
+    return 0.0
 
 def ndcg_at_k(ranking: list[str], labels: dict[str, int], k: int) -> float:
     """DCG / IDCG；增益 2**grade-1，折扣 log2(rank+1)，rank 从 1 开始。
     IDCG 使用全部 labels 的等级降序前 k 项，不是将已召回资料重新排序。
     """
-    raise NotImplementedError("请实现 nDCG@K")
-
+    def dcg(ranking, labels, k):
+        return sum((2 ** labels.get(record_id, 0) - 1) / log2(rank + 1) for rank, record_id in enumerate(ranking[:k], start=1))
+    ideal_ranking = sorted(labels, key=lambda record_id: -labels[record_id])
+    idcg = dcg(ideal_ranking, labels, k)
+    if idcg == 0:
+        return 0.0
+    return dcg(ranking, labels, k) / idcg
 
 def evaluate_ranking(ranking, labels, k):
     # 约束检查由框架完成；本节不要求实现通用评测库。
