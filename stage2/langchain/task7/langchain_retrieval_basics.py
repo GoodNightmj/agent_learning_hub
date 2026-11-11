@@ -51,7 +51,7 @@ def main() -> None:
     written_ids = vector_store.add_documents(documents=DOCUMENTS, ids=IDS)
     assert written_ids == IDS, "TODO 1：应写入四条记录并返回对应 ID"
     print(f"写入 {len(written_ids)} 个 chunk")
-
+    print("写入的 ID：", written_ids)   
     question = "模型提出工具调用后，是谁真正执行工具？"
     all_results = vector_store.similarity_search(question, k=2)
     show("不限制来源类型", all_results)

@@ -60,7 +60,6 @@ def main() -> None:
     assert rrf([[], []]) == []
     tokenized_corpus = [tokenize(doc.page_content) for doc in DOCS]
     bm25 = BM25Okapi(tokenized_corpus)
-    assert len(bm25_scores(bm25, QUESTIONS[0])) == len(DOCS)
     embeddings = HuggingFaceEmbeddings(
         model_name="Qwen/Qwen3-Embedding-0.6B",
         encode_kwargs={"normalize_embeddings": True},

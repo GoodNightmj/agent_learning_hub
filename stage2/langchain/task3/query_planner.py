@@ -23,7 +23,6 @@ def build_llm():
         api_key=api_key,
         base_url=base_url,
         model=model,
-        use_responses_api=True,
     )
     return llm
 def validate_query_plan(
