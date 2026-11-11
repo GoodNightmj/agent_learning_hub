@@ -1,0 +1,4 @@
+当前学习阶段：Stage3，现代 Agent Harness。
+暂缓任务：完整 LangChain Research Agent；Stage2 尚未正式结项。
+本节只练习模型请求、读取文件、返回工具结果与循环停止。
+练习标记：S3-L1-CEDAR-27
